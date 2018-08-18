@@ -41,9 +41,10 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let conn = libvirt::Connection::open(config.libvirt_uri.as_str())?;
     debug!("Opened connection to libvirt on '{}'", conn.get_uri()?);
 
-    let domains = conn.get().list_all_domains(virt::connect::VIR_CONNECT_LIST_DOMAINS_ACTIVE)?;
-    for domain in domains {
+    let domains = conn.list_all_domains(virt::connect::VIR_CONNECT_LIST_DOMAINS_ACTIVE)?;
+    for domain in domains.iter().map(|d| libvirt::Domain::from(d)) {
         info!("libvirt domain: {}", domain.get_name()?);
+        info!("qemu monitor result: {}", domain.qemu_monitor_command("{ \"execute\": \"help\" }", 0).unwrap().unwrap_or(String::from("none")));
     }
 
     Ok(())
