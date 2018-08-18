@@ -1,0 +1,6 @@
+[package]
+name = "vfio_motion_server"
+version = "0.1.0"
+authors = ["dev <jackos1998@gmail.com>"]
+
+[dependencies]

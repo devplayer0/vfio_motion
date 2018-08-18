@@ -1,0 +1,8 @@
+[[package]]
+name = "vfio_motion_client"
+version = "0.1.0"
+
+[[package]]
+name = "vfio_motion_server"
+version = "0.1.0"
+
