@@ -1,0 +1,10 @@
+{{
+    "execute": "device_add",
+    "arguments": {{
+        "driver": "virtio-input-host-pci",
+        "id": "{id}",
+        "evdev": "{device}",
+        "bus": "pci.0",
+        "addr": "{addr:#x}"
+    }}
+}}

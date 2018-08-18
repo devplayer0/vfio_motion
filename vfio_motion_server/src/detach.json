@@ -1,0 +1,6 @@
+{{
+    "execute": "device_del",
+    "arguments": {{
+        "id": "{id}"
+    }}
+}}

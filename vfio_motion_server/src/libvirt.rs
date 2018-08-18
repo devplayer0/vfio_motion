@@ -34,6 +34,7 @@ use virt::domain::sys::{virDomainPtr};
 pub struct Connection(virt::connect::Connect);
 impl Drop for Connection {
     fn drop(&mut self) {
+        trace!("closing qemu connection");
         self.close().unwrap();
     }
 }
@@ -77,6 +78,7 @@ impl<'a> Domain<'a> {
         unsafe {
             let mut result = ptr::null_mut();
             let ret = virDomainQemuMonitorCommand(self.0.as_ptr(), string_to_c_chars!(command), &mut result, flags);
+            trace!("qemu monitor ret: {}", ret);
             if ret == -1 {
                 return Err(Error::new());
             }

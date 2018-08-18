@@ -54,7 +54,7 @@ fn main() {
 
     trace!("log level: {}", log::max_level());
     if let Err(e) = vfio_motion_server::run(config) {
-        error!("Error: {}", e);
+        error!("{}", e);
         process::exit(1);
     }
 }
