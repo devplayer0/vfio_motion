@@ -36,7 +36,7 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, config::ConfigError> {
     config.set_default("log_level", LevelFilter::Info.to_string())?;
     config.set_default("libvirt_uri", "qemu:///system")?;
 
-    config.merge(config::File::with_name(args.value_of("config").unwrap()))?;
+    config.merge(config::File::with_name(args.value_of("config").unwrap()).required(false))?;
     let mut cur_config: Config = config.clone().try_into().unwrap();
     config.merge(SingleItemSource::from("log_level", cmp::max(cur_config.log_level()?, match args.occurrences_of("v") {
         0 => cur_config.log_level()?,
