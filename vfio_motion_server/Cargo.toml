@@ -6,4 +6,5 @@ authors = ["dev <jackos1998@gmail.com>"]
 [dependencies]
 quick-error = "1.2"
 clap = "~2.32"
-config = {version = "0.9", features = ["yaml"]}
+config = "0.9"
+virt = "0.2"

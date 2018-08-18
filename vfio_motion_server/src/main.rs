@@ -1,11 +1,11 @@
+use std::process;
+
 extern crate clap;
 extern crate config;
 
-extern crate vfio_motion_server;
-
-use std::process;
-
 use config::Config;
+
+extern crate vfio_motion_server;
 
 fn main() {
     let args = clap::App::new("vfio-motion server")
@@ -16,7 +16,7 @@ fn main() {
              .long("config")
              .value_name("FILE")
              .help("Set config file path")
-             .default_value("/etc/virtio-motion.yaml")
+             .default_value("/etc/virtio-motion.toml")
              .takes_value(true))
         .arg(clap::Arg::with_name("v")
              .short("v")
@@ -24,6 +24,8 @@ fn main() {
         .get_matches();
 
     let mut config = Config::default();
+    config.set("libvirt_uri", "qemu:///system").unwrap();
+
     config
         .merge(config::File::with_name(args.value_of("config").unwrap())).unwrap()
         .merge(config::Environment::with_prefix("VFIO_MOTION")).unwrap();
