@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["dev <jackos1998@gmail.com>"]
 
 [dependencies]
-quick-error = "1.2"
+quick-error = "~1.2"
 log = "~0.4"
 simplelog = "~0.5"
 clap = "~2.32"

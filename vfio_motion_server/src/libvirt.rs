@@ -27,9 +27,27 @@ use std::ptr;
 
 extern crate libc;
 extern crate virt;
+extern crate serde;
+extern crate serde_json;
 
-use virt::error::Error;
-use virt::domain::sys::{virDomainPtr};
+use virt::domain::sys::virDomainPtr;
+
+quick_error! {
+    #[derive(Debug)]
+    pub enum Error {
+        SerdeError(err: serde_json::Error) {
+            from()
+            description(err.description())
+        }
+        Virt(err: virt::error::Error) {
+            from()
+            description(err.description())
+        }
+        QemuMonitor(msg: serde_json::Value) {
+            display("Qemu Monitor command error: {:#?}", msg)
+        }
+    }
+}
 
 pub struct Connection(virt::connect::Connect);
 impl Drop for Connection {
@@ -74,20 +92,31 @@ extern "C" {
     fn virDomainQemuMonitorCommand(ptr: virDomainPtr, cmd: *const libc::c_char, result: *mut *mut libc::c_char, flags: libc::c_uint) -> libc::c_int;
 }
 impl<'a> Domain<'a> {
-    pub fn qemu_monitor_command(&self, command: &str, flags: u32) -> Result<Option<String>, Error> {
+    pub fn qemu_monitor_command(&self, command: &str, flags: u32) -> Result<Option<serde_json::Value>, Error> {
         unsafe {
             let mut result = ptr::null_mut();
             let ret = virDomainQemuMonitorCommand(self.0.as_ptr(), string_to_c_chars!(command), &mut result, flags);
             trace!("qemu monitor ret: {}", ret);
-            if ret == -1 {
-                return Err(Error::new());
+
+            if ret != 0 {
+                return Err(virt::error::Error::new().into());
             }
 
-            if result.is_null() {
-                Ok(None)
+            Ok(if !result.is_null() {
+                let msg = c_chars_to_string!(result);
+                let parse: Result<serde_json::Value, serde_json::Error> = serde_json::from_str(&msg);
+                Some(if let Ok(val) = parse {
+                    if val.as_object().unwrap().contains_key("error") {
+                        return Err(Error::QemuMonitor(val.as_object().unwrap()["error"].clone()));
+                    } else {
+                        val
+                    }
+                } else {
+                    json!(msg)
+                })
             } else {
-                Ok(Some(c_chars_to_string!(result)))
-            }
+               None
+            })
         }
     }
 }
