@@ -11,7 +11,7 @@ use log::LevelFilter;
 use simplelog::TermLogger;
 
 extern crate vfio_motion_server;
-use vfio_motion_server::Config;
+use vfio_motion_server::config::Config;
 use vfio_motion_server::util::SingleItemSource;
 
 fn args<'a>() -> clap::ArgMatches<'a> {
@@ -32,9 +32,11 @@ fn args<'a>() -> clap::ArgMatches<'a> {
         .get_matches()
 }
 fn load_config(args: clap::ArgMatches) -> Result<Config, config::ConfigError> {
-    let mut config = config::Config::default();
+    let mut config = self::config::Config::default();
     config.set_default("log_level", LevelFilter::Info.to_string())?;
     config.set_default("libvirt_uri", "qemu:///system")?;
+    config.set_default("http.address", "127.0.0.1")?;
+    config.set_default("http.port", 3000)?;
 
     config.merge(config::File::with_name(args.value_of("config").unwrap()).required(false))?;
     let mut cur_config: Config = config.clone().try_into().unwrap();

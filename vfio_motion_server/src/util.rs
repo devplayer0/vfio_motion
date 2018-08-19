@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 
 extern crate config;
+extern crate log;
+extern crate rocket;
 
-use config::{Source, Value, ConfigError};
+use self::config::{Source, Value, ConfigError};
+use log::LevelFilter;
+use self::rocket::config::LoggingLevel;
 
 #[derive(Clone, Debug)]
 pub struct SingleItemSource(String, String);
@@ -19,5 +23,13 @@ impl<'a> Source for SingleItemSource {
         let mut map = HashMap::with_capacity(1);
         map.insert(self.0.clone(), Value::new(None, self.1.clone()));
         Ok(map)
+    }
+}
+
+pub fn rocket_log_level(level: LevelFilter) -> LoggingLevel {
+    match level {
+        LevelFilter::Off | LevelFilter::Error | LevelFilter::Warn => LoggingLevel::Critical,
+        LevelFilter::Info => LoggingLevel::Normal,
+        LevelFilter::Debug | LevelFilter::Trace => LoggingLevel::Debug,
     }
 }
