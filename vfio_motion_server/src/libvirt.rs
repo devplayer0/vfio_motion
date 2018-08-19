@@ -109,20 +109,20 @@ pub fn set_error_handler<T>(ctx: Box<Option<T>>, handler: VirtErrorHandler<T>) {
     }
 }
 
-pub struct Domain<'a>(&'a ::virt::domain::Domain);
-impl<'a> Deref for Domain<'a> {
+pub struct Domain(::virt::domain::Domain);
+impl Deref for Domain {
     type Target = ::virt::domain::Domain;
     fn deref(&self) -> &::virt::domain::Domain {
         &self.0
     }
 }
 
-impl<'a> From<&'a ::virt::domain::Domain> for Domain<'a> {
-    fn from(d: &'a ::virt::domain::Domain) -> Self {
+impl From<::virt::domain::Domain> for Domain {
+    fn from(d: ::virt::domain::Domain) -> Self {
         Domain(d)
     }
 }
-impl<'a> Domain<'a> {
+impl Domain {
     pub fn qemu_monitor_command(&self, command: &str, flags: QemuMonitorCommandFlags) -> Result<Option<::serde_json::Value>, Error> {
         unsafe {
             let mut result = ptr::null_mut();

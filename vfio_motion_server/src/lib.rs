@@ -2,7 +2,6 @@
 #![plugin(rocket_codegen)]
 use std::process;
 use std::error::Error;
-use std::path::Path;
 
 #[macro_use]
 extern crate quick_error;
@@ -14,11 +13,13 @@ extern crate serde_derive;
 extern crate serde_json;
 
 extern crate config as config_rs;
+extern crate serde;
 extern crate virt;
 extern crate libc;
 extern crate nix;
 extern crate simple_signal;
 extern crate rocket;
+extern crate rocket_contrib;
 
 use simple_signal::Signal;
 
@@ -46,13 +47,6 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         process::exit(0);
     });
     debug!("Opened connection to libvirt on '{}'", conn.get_uri()?);
-
-    let domains = conn.list_all_domains(virt::connect::VIR_CONNECT_LIST_DOMAINS_ACTIVE)?;
-    for domain in domains.iter().map(|d| libvirt::Domain::from(d)) {
-        info!("libvirt domain: {}", domain.get_name()?);
-        //input::Device::new(&domain, Path::new("/dev/input/by-id/usb-Logitech_G203_Prodigy_Gaming_Mouse_0487365B3837-event-mouse"), 0x10)?.attach()?;
-        //info!("attached device!");
-    }
 
     Err(Box::new(server::run(config.http().get())))
 }
