@@ -24,6 +24,7 @@ macro_rules! string_to_c_chars {
 
 use std::ops::{Deref, DerefMut};
 use std::ptr;
+use std::mem;
 
 extern crate libc;
 extern crate virt;
@@ -78,6 +79,40 @@ pub type QemuMonitorCommandFlags = libc::c_uint;
 pub const VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT: QemuMonitorCommandFlags = 0;
 pub const VIR_DOMAIN_QEMU_MONITOR_COMMAND_HMP: QemuMonitorCommandFlags = 1;
 
+pub type virErrorFunc = unsafe extern "C" fn(*mut libc::c_void, virt::error::sys::virErrorPtr);
+#[link(name = "virt-qemu")]
+extern "C" {
+    fn virSetErrorFunc(ctx: *mut libc::c_void, handler: virErrorFunc);
+    fn virDomainQemuMonitorCommand(ptr: virDomainPtr, cmd: *const libc::c_char, result: *mut *mut libc::c_char, flags: libc::c_uint) -> libc::c_int;
+}
+
+pub type VirtErrorHandler<T> = fn(Box<Option<T>>, virt::error::Error);
+struct VirtErrorData<T> {
+    handler: VirtErrorHandler<T>,
+    ctx: Box<Option<T>>
+}
+unsafe extern "C" fn _error_handler<T>(_ctx: *mut libc::c_void, _err: virt::error::sys::virErrorPtr) {
+    let _ctx: Box<VirtErrorData<T>> = Box::from_raw(_ctx as *mut VirtErrorData<T>);
+    let err = virt::error::Error {
+        code: (*_err).code,
+        domain: (*_err).domain,
+        message: c_chars_to_string!((*_err).message, nofree),
+        level: virt::error::ErrorLevel::from((*_err).level)
+    };
+
+    (_ctx.handler)(_ctx.ctx, err);
+}
+pub fn set_error_handler<T>(ctx: Box<Option<T>>, handler: VirtErrorHandler<T>) {
+    unsafe {
+        let ctx = Box::new(VirtErrorData {
+            handler,
+            ctx
+        });
+
+        virSetErrorFunc(mem::transmute(ctx), _error_handler::<T>);
+    }
+}
+
 pub struct Domain<'a>(&'a virt::domain::Domain);
 impl<'a> Deref for Domain<'a> {
     type Target = virt::domain::Domain;
@@ -90,10 +125,6 @@ impl<'a> From<&'a virt::domain::Domain> for Domain<'a> {
     fn from(d: &'a virt::domain::Domain) -> Self {
         Domain(d)
     }
-}
-#[link(name = "virt-qemu")]
-extern "C" {
-    fn virDomainQemuMonitorCommand(ptr: virDomainPtr, cmd: *const libc::c_char, result: *mut *mut libc::c_char, flags: libc::c_uint) -> libc::c_int;
 }
 impl<'a> Domain<'a> {
     pub fn qemu_monitor_command(&self, command: &str, flags: QemuMonitorCommandFlags) -> Result<Option<serde_json::Value>, Error> {

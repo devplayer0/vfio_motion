@@ -43,7 +43,12 @@ impl Config {
     }
 }
 
+fn test_handler(ctx: Box<Option<String>>, err: virt::error::Error) {
+    trace!("libvirt error: {}", err);
+}
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    libvirt::set_error_handler(Box::new(None), test_handler);
+
     let conn = libvirt::Connection::open(config.libvirt_uri.as_str())?;
     debug!("Opened connection to libvirt on '{}'", conn.get_uri()?);
 
