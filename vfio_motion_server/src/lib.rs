@@ -1,3 +1,5 @@
+#![feature(plugin)]
+#![plugin(rocket_codegen)]
 use std::process;
 use std::error::Error;
 use std::path::Path;
@@ -10,8 +12,13 @@ extern crate log;
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
+
+extern crate config as config_rs;
 extern crate virt;
+extern crate libc;
+extern crate nix;
 extern crate simple_signal;
+extern crate rocket;
 
 use simple_signal::Signal;
 

@@ -1,9 +1,6 @@
 use std::path::{Path, PathBuf};
 
-extern crate nix;
-extern crate virt;
-
-use self::nix::sys::stat::{stat, SFlag};
+use ::nix::sys::stat::{stat, SFlag};
 
 use libvirt;
 use libvirt::Domain;
@@ -11,7 +8,7 @@ use libvirt::Domain;
 quick_error! {
     #[derive(Debug)]
     pub enum Error {
-        SysError(err: nix::Error) {
+        SysError(err: ::nix::Error) {
             from()
             display("System error: {}", ::std::error::Error::description(err))
         }

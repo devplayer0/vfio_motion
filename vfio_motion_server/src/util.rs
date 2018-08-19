@@ -1,12 +1,8 @@
 use std::collections::HashMap;
 
-extern crate config;
-extern crate log;
-extern crate rocket;
-
-use self::config::{Source, Value, ConfigError};
-use log::LevelFilter;
-use self::rocket::config::LoggingLevel;
+use ::config_rs::{Source, Value, ConfigError};
+use ::log::LevelFilter;
+use ::rocket::config::LoggingLevel;
 
 #[derive(Clone, Debug)]
 pub struct SingleItemSource(String, String);

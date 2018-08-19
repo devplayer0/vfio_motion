@@ -1,18 +1,14 @@
 use std::error::Error;
 
-extern crate log;
-extern crate config;
-extern crate rocket;
-
-use log::LevelFilter;
-use self::config::ConfigError;
+use ::log::LevelFilter;
+use ::config_rs::ConfigError;
 
 use util;
 
 #[cfg(build = "debug")]
-const ROCKET_ENVIRONMENT: rocket::config::Environment = rocket::config::Environment::Development;
+const ROCKET_ENVIRONMENT: ::rocket::config::Environment = ::rocket::config::Environment::Development;
 #[cfg(build = "release")]
-const ROCKET_ENVIRONMENT: rocket::config::Environment = rocket::config::Environment::Production;
+const ROCKET_ENVIRONMENT: ::rocket::config::Environment = ::rocket::config::Environment::Production;
 
 #[derive(Debug, Deserialize)]
 pub struct RocketConfig {
@@ -20,10 +16,10 @@ pub struct RocketConfig {
     port: u16,
 }
 impl RocketConfig {
-    pub fn get(&self) -> rocket::config::Config {
-        rocket::config::Config::build(ROCKET_ENVIRONMENT)
+    pub fn get(&self) -> ::rocket::config::Config {
+        ::rocket::config::Config::build(ROCKET_ENVIRONMENT)
             .address(self.address.clone())
-            .log_level(util::rocket_log_level(log::max_level()))
+            .log_level(util::rocket_log_level(::log::max_level()))
             .port(self.port)
             .unwrap()
     }
@@ -42,7 +38,7 @@ impl Config {
         match self._log_level {
             Some(v) => Ok(v),
             None => {
-                let v = self.log_level.parse().map_err(|e: log::ParseLevelError| config::ConfigError::Message(e.description().to_string()))?;
+                let v = self.log_level.parse().map_err(|e: ::log::ParseLevelError| ::config_rs::ConfigError::Message(e.description().to_string()))?;
                 self._log_level = Some(v);
                 Ok(v)
             }
