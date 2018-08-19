@@ -74,6 +74,10 @@ impl Connection {
     }
 }
 
+pub type QemuMonitorCommandFlags = libc::c_uint;
+pub const VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT: QemuMonitorCommandFlags = 0;
+pub const VIR_DOMAIN_QEMU_MONITOR_COMMAND_HMP: QemuMonitorCommandFlags = 1;
+
 pub struct Domain<'a>(&'a virt::domain::Domain);
 impl<'a> Deref for Domain<'a> {
     type Target = virt::domain::Domain;
@@ -92,7 +96,7 @@ extern "C" {
     fn virDomainQemuMonitorCommand(ptr: virDomainPtr, cmd: *const libc::c_char, result: *mut *mut libc::c_char, flags: libc::c_uint) -> libc::c_int;
 }
 impl<'a> Domain<'a> {
-    pub fn qemu_monitor_command(&self, command: &str, flags: u32) -> Result<Option<serde_json::Value>, Error> {
+    pub fn qemu_monitor_command(&self, command: &str, flags: QemuMonitorCommandFlags) -> Result<Option<serde_json::Value>, Error> {
         unsafe {
             let mut result = ptr::null_mut();
             let ret = virDomainQemuMonitorCommand(self.0.as_ptr(), string_to_c_chars!(command), &mut result, flags);

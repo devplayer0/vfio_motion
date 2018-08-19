@@ -59,7 +59,11 @@ impl<'a> Device<'a> {
             return Err(Error::BadState("Already attached!"));
         }*/
 
-        debug!("qemu attach response: {:#?}", self.domain.qemu_monitor_command(format!(include_str!("attach.json"), id=self.id, device=self.evdev, addr=self.addr).as_str(), 0)?.unwrap_or(json!(null)));
+        debug!("qemu attach response: {:#?}",
+               self.domain.qemu_monitor_command(
+                   format!(include_str!("attach.json"), id=self.id, device=self.evdev, addr=self.addr).as_str(),
+                   libvirt::VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT)?
+               .unwrap_or(json!(null)));
         Ok(())
     }
     pub fn detach(&self) -> Result<(), Error> {
@@ -67,7 +71,11 @@ impl<'a> Device<'a> {
             return Err(Error::BadState("Not attached!"));
         }*/
 
-        debug!("qemu detach response: {:#?}", self.domain.qemu_monitor_command(format!(include_str!("detach.json"), id=self.id).as_str(), 0)?.unwrap_or(json!(null)));
+        debug!("qemu detach response: {:#?}",
+               self.domain.qemu_monitor_command(
+                   format!(include_str!("detach.json"), id=self.id).as_str(),
+                   libvirt::VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT)?
+               .unwrap_or(json!(null)));
         Ok(())
     }
 }
