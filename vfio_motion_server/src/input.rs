@@ -55,27 +55,41 @@ impl<'a> Device<'a> {
     }
 
     pub fn attach(&self) -> Result<(), Error> {
-        /*if let Some(_) = self.domain {
-            return Err(Error::BadState("Already attached!"));
-        }*/
+        let msg = match self.domain.qemu_monitor_command(
+            format!(include_str!("attach.json"), id=self.id, device=self.evdev, addr=self.addr).as_str(),
+            libvirt::VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT) {
+            Ok(m) => m,
+            Err(e) => return Err(if let libvirt::Error::QemuMonitor(msg) = e {
+                if msg["class"] == json!("GenericError") && msg["desc"] == json!(format!("Duplicate ID '{}' for device", self.id)) {
+                    Error::BadState("Device already attached!")
+                } else {
+                    libvirt::Error::QemuMonitor(msg).into()
+                }
+            } else {
+                e.into()
+            })
+        };
 
-        debug!("qemu attach response: {:#?}",
-               self.domain.qemu_monitor_command(
-                   format!(include_str!("attach.json"), id=self.id, device=self.evdev, addr=self.addr).as_str(),
-                   libvirt::VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT)?
-               .unwrap_or(json!(null)));
+        debug!("qemu attach response: {:#?}", msg.unwrap_or(json!(null)));
         Ok(())
     }
     pub fn detach(&self) -> Result<(), Error> {
-        /*if let None = self.domain {
-            return Err(Error::BadState("Not attached!"));
-        }*/
+        let msg = match self.domain.qemu_monitor_command(
+            format!(include_str!("detach.json"), id=self.id).as_str(),
+            libvirt::VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT) {
+            Ok(m) => m,
+            Err(e) => return Err(if let libvirt::Error::QemuMonitor(msg) = e {
+                if msg["class"] == json!("DeviceNotFound") {
+                    Error::BadState("Device not attached!")
+                } else {
+                    libvirt::Error::QemuMonitor(msg).into()
+                }
+            } else {
+                e.into()
+            })
+        };
 
-        debug!("qemu detach response: {:#?}",
-               self.domain.qemu_monitor_command(
-                   format!(include_str!("detach.json"), id=self.id).as_str(),
-                   libvirt::VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT)?
-               .unwrap_or(json!(null)));
+        debug!("qemu detach response: {:#?}", msg.unwrap_or(json!(null)));
         Ok(())
     }
 }

@@ -1,5 +1,6 @@
 use std::process;
 use std::error::Error;
+use std::path::Path;
 
 #[macro_use]
 extern crate quick_error;
