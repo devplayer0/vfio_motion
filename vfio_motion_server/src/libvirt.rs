@@ -92,7 +92,7 @@ struct VirtErrorData<T> {
     ctx: Box<Option<T>>
 }
 unsafe extern "C" fn _error_handler<T>(_ctx: *mut libc::c_void, _err: virt::error::sys::virErrorPtr) {
-    let _ctx: Box<VirtErrorData<T>> = Box::from_raw(_ctx as *mut VirtErrorData<T>);
+    let _ctx: Box<VirtErrorData<T>> = mem::transmute(_ctx);
     let err = virt::error::Error {
         code: (*_err).code,
         domain: (*_err).domain,

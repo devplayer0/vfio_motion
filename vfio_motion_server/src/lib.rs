@@ -43,7 +43,7 @@ impl Config {
     }
 }
 
-fn test_handler(ctx: Box<Option<String>>, err: virt::error::Error) {
+fn test_handler(_ctx: Box<Option<String>>, err: virt::error::Error) {
     trace!("libvirt error: {}", err);
 }
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
