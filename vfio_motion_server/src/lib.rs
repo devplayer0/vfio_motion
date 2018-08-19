@@ -1,3 +1,4 @@
+use std::process;
 use std::error::Error;
 
 #[macro_use]
@@ -9,6 +10,9 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 extern crate virt;
+extern crate simple_signal;
+
+use simple_signal::Signal;
 
 pub mod util;
 pub mod config;
@@ -22,10 +26,17 @@ fn dummy_handler(_ctx: Box<Option<String>>, err: virt::error::Error) {
     trace!("libvirt error: {}", err);
 }
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+
     // Prevent libvirt built-in error logging
     libvirt::set_error_handler(Box::new(None), dummy_handler);
 
     let conn = libvirt::Connection::open(config.libvirt_uri())?;
+    simple_signal::set_handler(&[Signal::Int, Signal::Term], |_signals| {
+        info!("shutting down...");
+        // TODO: find a way to do this across threads... (maybe have a dedicated libvirt thread?)
+        //drop(conn);
+        process::exit(0);
+    });
     debug!("Opened connection to libvirt on '{}'", conn.get_uri()?);
 
     let domains = conn.list_all_domains(virt::connect::VIR_CONNECT_LIST_DOMAINS_ACTIVE)?;
