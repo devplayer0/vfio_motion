@@ -74,6 +74,9 @@ impl Connection {
     }
 }
 
+pub const VIR_ERR_INTERNAL_ERROR: i32 = 1;
+pub const VIR_ERR_OPERATION_FAILED: i32 = 9;
+
 pub type QemuMonitorCommandFlags = c_uint;
 pub const VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT: QemuMonitorCommandFlags = 0;
 pub const VIR_DOMAIN_QEMU_MONITOR_COMMAND_HMP: QemuMonitorCommandFlags = 1;

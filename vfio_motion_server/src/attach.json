@@ -3,7 +3,7 @@
     "arguments": {{
         "driver": "virtio-input-host-pci",
         "id": "{id}",
-        "evdev": "{device:?}",
+        "evdev": "{device}",
         "bus": "pci.0",
         "addr": "{addr:#x}"
     }}
