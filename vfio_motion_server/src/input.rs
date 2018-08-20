@@ -27,9 +27,9 @@ quick_error! {
     }
 }
 
+#[derive(Serialize)]
 pub struct Device {
     id: String,
-
     evdev: PathBuf,
     addr: u32,
     domain: Domain
@@ -52,6 +52,19 @@ impl Device {
             addr,
             domain
         })
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+    pub fn evdev(&self) -> &Path {
+        &self.evdev
+    }
+    pub fn addr(&self) -> u32 {
+        self.addr
+    }
+    pub fn domain(&self) -> &Domain {
+        &self.domain
     }
 
     pub fn attach(&self) -> Result<(), Error> {
@@ -116,29 +129,26 @@ impl<'de> Deserialize<'de> for Device {
             {
                 let mut evdev = None;
                 let mut addr = None;
-                let mut domain: Some<Domain> = None;
+                let mut domain = None;
                 while let Some(key) = map.next_key()? {
                     match key {
                         Field::Evdev => {
                             if evdev.is_some() {
-                                return de::Error::duplicate_field("evdev");
+                                return Err(de::Error::duplicate_field("evdev"));
                             }
                             evdev = Some(map.next_value()?);
                         }
                         Field::Addr => {
                             if addr.is_some() {
-                                return de::Error::duplicate_field("addr");
+                                return Err(de::Error::duplicate_field("addr"));
                             }
                             addr = Some(map.next_value()?);
                         }
                         Field::Domain => {
                             if domain.is_some() {
-                                return de::Error::duplicate_field("domain");
+                                return Err(de::Error::duplicate_field("domain"));
                             }
-
-                            let domain_name = map.next_value()?;
-                            let conn = ::libvirt::Connection::open("qemu:///system")?;
-                            let domain = Some(::virt::Domain::lookup_by_name(&conn, domain_name)?);
+                            domain = Some(map.next_value()?);
                         }
                     }
                 }
@@ -146,7 +156,7 @@ impl<'de> Deserialize<'de> for Device {
                 let evdev = evdev.ok_or_else(|| de::Error::missing_field("evdev"))?;
                 let addr = addr.ok_or_else(|| de::Error::missing_field("addr"))?;
                 let domain = domain.ok_or_else(|| de::Error::missing_field("domain"))?;
-                Device::new(domain, evdev, addr)
+                Device::new(domain, evdev, addr).map_err(de::Error::custom)
             }
         }
 

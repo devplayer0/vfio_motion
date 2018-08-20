@@ -25,9 +25,12 @@ macro_rules! string_to_c_chars {
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::mem;
+use std::fmt;
 
 use ::virt::domain::sys::virDomainPtr;
 use ::libc::{c_uint, c_int, c_char, c_void};
+use ::serde::ser::{self, Serialize, Serializer};
+use ::serde::de::{self, Deserialize, Deserializer, Visitor};
 
 quick_error! {
     #[derive(Debug)]
@@ -149,5 +152,39 @@ impl Domain {
                None
             })
         }
+    }
+}
+impl Serialize for Domain {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let name = self.get_name().map_err(ser::Error::custom)?;
+        serializer.serialize_str(&name)
+    }
+}
+impl<'de> Deserialize<'de> for Domain {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct DomainVisitor;
+        impl<'de> Visitor<'de> for DomainVisitor {
+            type Value = Domain;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Domain")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Domain, E>
+            where
+                E: de::Error,
+            {
+                let conn = ::libvirt::Connection::open("qemu:///system").map_err(de::Error::custom)?;
+                Ok(::virt::domain::Domain::lookup_by_name(&conn, value).map_err(de::Error::custom)?.into())
+            }
+        }
+
+        deserializer.deserialize_str(DomainVisitor)
     }
 }

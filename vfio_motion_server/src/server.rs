@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use ::rocket::config::Config;
 use ::rocket::error::{LaunchError};
 use ::rocket::request::{Request, FromRequest};
@@ -8,15 +6,9 @@ use ::rocket_contrib::Json;
 
 use input::Device;
 
-#[derive(Debug, Deserialize)]
-struct AttachRequest {
-    domain: String,
-    device: String,
-    addr: u32,
-}
-
-#[post("/", data="<req>")]
-fn attach(req: Json<AttachRequest>) -> status::NoContent {
+#[post("/", data="<device>")]
+fn attach(device: Json<Device>) -> status::NoContent {
+    info!("we have an evdev: {:?}", device.evdev());
     status::NoContent
 }
 
