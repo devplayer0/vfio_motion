@@ -39,6 +39,7 @@ quick_error! {
             from()
             description(err.description())
         }
+        GlobalConnNotOpen
         Virt(err: ::virt::error::Error) {
             from()
             description(err.description())
@@ -50,6 +51,9 @@ quick_error! {
 }
 
 pub struct Connection(::virt::connect::Connect);
+unsafe impl Send for Connection {}
+unsafe impl Sync for Connection {}
+
 impl Drop for Connection {
     fn drop(&mut self) {
         trace!("closing qemu connection");
@@ -71,6 +75,26 @@ impl DerefMut for Connection {
 impl Connection {
     pub fn open(uri: &str) -> Result<Connection, ::virt::error::Error> {
         Ok(Connection(::virt::connect::Connect::open(uri)?))
+    }
+}
+
+static mut GLOBAL_CONN: Option<Connection> = None;
+pub unsafe fn open_global_conn(uri: &str) -> Result<(), ::virt::error::Error> {
+    GLOBAL_CONN = Some(Connection::open(uri)?);
+    Ok(())
+}
+pub unsafe fn close_global_conn() -> Result<(), Error> {
+    match GLOBAL_CONN {
+        None => Err(Error::GlobalConnNotOpen),
+        Some(ref mut conn) => conn.close().map(|_| ()).map_err(|e| Error::Virt(e))
+    }
+}
+fn get_global_conn() -> Option<&'static Connection> {
+    unsafe {
+        match GLOBAL_CONN {
+            Some(ref conn) => Some(&conn),
+            None => None
+        }
     }
 }
 
@@ -116,6 +140,9 @@ pub fn set_error_handler<T>(ctx: Box<Option<T>>, handler: VirtErrorHandler<T>) {
 }
 
 pub struct Domain(::virt::domain::Domain);
+unsafe impl Send for Domain {}
+unsafe impl Sync for Domain {}
+
 impl Deref for Domain {
     type Target = ::virt::domain::Domain;
     fn deref(&self) -> &::virt::domain::Domain {
@@ -183,8 +210,10 @@ impl<'de> Deserialize<'de> for Domain {
             where
                 E: de::Error,
             {
-                let conn = ::libvirt::Connection::open("qemu:///system").map_err(de::Error::custom)?;
-                Ok(::virt::domain::Domain::lookup_by_name(&conn, value).map_err(de::Error::custom)?.into())
+                match get_global_conn() {
+                    None => Err(de::Error::custom(Error::GlobalConnNotOpen)),
+                    Some(ref conn) => Ok(::virt::domain::Domain::lookup_by_name(&conn, value).map_err(de::Error::custom)?.into())
+                }
             }
         }
 

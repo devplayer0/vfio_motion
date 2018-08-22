@@ -39,11 +39,18 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     // Prevent libvirt built-in error logging
     libvirt::set_error_handler(Box::new(None), dummy_handler);
 
+    unsafe {
+        libvirt::open_global_conn(config.libvirt_uri().into())?
+    }
     let conn = libvirt::Connection::open(config.libvirt_uri())?;
     simple_signal::set_handler(&[Signal::Int, Signal::Term], |_signals| {
         info!("shutting down...");
-        // TODO: find a way to do this across threads... (maybe have a dedicated libvirt thread?)
-        //drop(conn);
+        unsafe {
+            match libvirt::close_global_conn() {
+                Err(e) => error!("failed to close global connection: {}", e),
+                _ => process::exit(-1)
+            };
+        }
         process::exit(0);
     });
     debug!("Opened connection to libvirt on '{}'", conn.get_uri()?);
