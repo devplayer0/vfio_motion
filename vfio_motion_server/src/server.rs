@@ -1,7 +1,6 @@
 use ::rocket::config::Config;
 use ::rocket::error::{LaunchError};
 use ::rocket::http::Status;
-use ::rocket::request::Request;
 use ::rocket::response::status;
 use ::rocket_contrib::{SerdeError, Json};
 

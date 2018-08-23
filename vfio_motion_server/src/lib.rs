@@ -16,37 +16,38 @@ extern crate serde_json;
 extern crate config as config_rs;
 extern crate serde;
 extern crate virt;
-extern crate libc;
 extern crate nix;
 extern crate simple_signal;
 extern crate rocket;
 extern crate rocket_contrib;
 
+extern crate vfio_motion_common;
+
 use simple_signal::Signal;
 
 pub mod util;
 pub mod config;
-mod libvirt;
 mod input;
 mod server;
 
+use ::vfio_motion_common::libvirt;
 use config::Config;
 
-fn dummy_handler(_ctx: Box<Option<String>>, err: virt::error::Error) {
+fn dummy_virt_handler(_ctx: Box<Option<String>>, err: virt::error::Error) {
     trace!("libvirt error: {}", err);
 }
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     // Prevent libvirt built-in error logging
-    libvirt::set_error_handler(Box::new(None), dummy_handler);
+    libvirt::set_error_handler(Box::new(None), dummy_virt_handler);
 
     unsafe {
-        libvirt::open_global_conn(config.libvirt_uri().into())?
+        input::open_global_conn(config.libvirt_uri().into())?
     }
     let conn = libvirt::Connection::open(config.libvirt_uri())?;
     simple_signal::set_handler(&[Signal::Int, Signal::Term], |_signals| {
         info!("shutting down...");
         unsafe {
-            match libvirt::close_global_conn() {
+            match input::close_global_conn() {
                 Err(e) => error!("failed to close global connection: {}", e),
                 _ => process::exit(-1)
             };

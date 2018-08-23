@@ -4,8 +4,7 @@ use std::fmt;
 use ::nix::sys::stat::{stat, SFlag};
 use ::serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
 
-use libvirt;
-use libvirt::Domain;
+use ::vfio_motion_common::libvirt::{self, Connection, Domain};
 
 quick_error! {
     #[derive(Debug)]
@@ -20,6 +19,7 @@ quick_error! {
         BadState(msg: &'static str) {
             description(msg)
         }
+        GlobalConnNotOpen
         Libvirt(err: libvirt::Error) {
             from()
             display("{}", err)
@@ -27,6 +27,26 @@ quick_error! {
         Virt(err: ::virt::error::Error) {
             from()
             display("{}", err)
+        }
+    }
+}
+
+static mut GLOBAL_CONN: Option<Connection> = None;
+pub unsafe fn open_global_conn(uri: &str) -> Result<(), ::virt::error::Error> {
+    GLOBAL_CONN = Some(Connection::open(uri)?);
+    Ok(())
+}
+pub unsafe fn close_global_conn() -> Result<(), Error> {
+    match GLOBAL_CONN {
+        None => Err(Error::GlobalConnNotOpen),
+        Some(ref mut conn) => conn.close().map(|_| ()).map_err(|e| Error::Virt(e))
+    }
+}
+fn get_global_conn() -> Option<&'static Connection> {
+    unsafe {
+        match GLOBAL_CONN {
+            Some(ref conn) => Some(&conn),
+            None => None
         }
     }
 }
@@ -130,7 +150,11 @@ impl<'de> Deserialize<'de> for Device {
                             if domain.is_some() {
                                 return Err(de::Error::duplicate_field("domain"));
                             }
-                            domain = Some(map.next_value()?);
+
+                            domain = match get_global_conn() {
+                                None => return Err(de::Error::custom(Error::GlobalConnNotOpen)),
+                                Some(ref conn) => Some(::virt::domain::Domain::lookup_by_name(&conn, map.next_value()?).map_err(de::Error::custom)?.into())
+                            }
                         }
                     }
                 }

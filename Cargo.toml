@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+	"vfio_motion_common",
 	"vfio_motion_server",
 	"vfio_motion_client",
 ]

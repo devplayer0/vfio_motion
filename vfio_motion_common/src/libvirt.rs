@@ -25,12 +25,10 @@ macro_rules! string_to_c_chars {
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::mem;
-use std::fmt;
 
 use ::virt::domain::sys::virDomainPtr;
 use ::libc::{c_uint, c_int, c_char, c_void};
 use ::serde::ser::{self, Serialize, Serializer};
-use ::serde::de::{self, Deserialize, Deserializer, Visitor};
 
 quick_error! {
     #[derive(Debug)]
@@ -75,26 +73,6 @@ impl DerefMut for Connection {
 impl Connection {
     pub fn open(uri: &str) -> Result<Connection, ::virt::error::Error> {
         Ok(Connection(::virt::connect::Connect::open(uri)?))
-    }
-}
-
-static mut GLOBAL_CONN: Option<Connection> = None;
-pub unsafe fn open_global_conn(uri: &str) -> Result<(), ::virt::error::Error> {
-    GLOBAL_CONN = Some(Connection::open(uri)?);
-    Ok(())
-}
-pub unsafe fn close_global_conn() -> Result<(), Error> {
-    match GLOBAL_CONN {
-        None => Err(Error::GlobalConnNotOpen),
-        Some(ref mut conn) => conn.close().map(|_| ()).map_err(|e| Error::Virt(e))
-    }
-}
-fn get_global_conn() -> Option<&'static Connection> {
-    unsafe {
-        match GLOBAL_CONN {
-            Some(ref conn) => Some(&conn),
-            None => None
-        }
     }
 }
 
@@ -191,32 +169,5 @@ impl Serialize for Domain {
     {
         let name = self.get_name().map_err(ser::Error::custom)?;
         serializer.serialize_str(&name)
-    }
-}
-impl<'de> Deserialize<'de> for Domain {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct DomainVisitor;
-        impl<'de> Visitor<'de> for DomainVisitor {
-            type Value = Domain;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct Domain")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Domain, E>
-            where
-                E: de::Error,
-            {
-                match get_global_conn() {
-                    None => Err(de::Error::custom(Error::GlobalConnNotOpen)),
-                    Some(ref conn) => Ok(::virt::domain::Domain::lookup_by_name(&conn, value).map_err(de::Error::custom)?.into())
-                }
-            }
-        }
-
-        deserializer.deserialize_str(DomainVisitor)
     }
 }
