@@ -1,3 +1,4 @@
+#![feature(extern_prelude)]
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 use std::process;
@@ -35,7 +36,6 @@ fn dummy_handler(_ctx: Box<Option<String>>, err: virt::error::Error) {
     trace!("libvirt error: {}", err);
 }
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-
     // Prevent libvirt built-in error logging
     libvirt::set_error_handler(Box::new(None), dummy_handler);
 
