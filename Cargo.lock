@@ -767,6 +767,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "vfio_motion_client"
 version = "0.1.0"
+dependencies = [
+ "vfio_motion_common 0.1.0",
+]
 
 [[package]]
 name = "vfio_motion_common"

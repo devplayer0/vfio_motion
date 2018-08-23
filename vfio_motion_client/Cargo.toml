@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["dev <jackos1998@gmail.com>"]
 
 [dependencies]
+vfio_motion_common = { path = "../vfio_motion_common" }
