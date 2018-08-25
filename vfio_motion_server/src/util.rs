@@ -7,7 +7,7 @@ use ::rocket::config::LoggingLevel;
 #[derive(Clone, Debug)]
 pub struct SingleItemSource(String, String);
 impl SingleItemSource {
-    pub fn from(key: &str, value: String) -> Self {
+    pub fn new(key: &str, value: String) -> Self {
         SingleItemSource(key.to_string(), value)
     }
 }
