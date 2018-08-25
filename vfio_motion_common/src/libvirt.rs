@@ -33,7 +33,7 @@ use ::serde::ser::{self, Serialize, Serializer};
 quick_error! {
     #[derive(Debug)]
     pub enum Error {
-        SerdeError(err: ::serde_json::Error) {
+        Serde(err: ::serde_json::Error) {
             from()
             description(err.description())
         }

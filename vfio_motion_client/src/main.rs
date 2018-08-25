@@ -1,10 +1,22 @@
-extern crate vfio_motion_common;
+use std::process;
 
-use ::vfio_motion_common::libvirt::{self, Connection};
+#[macro_use]
+extern crate log;
+
+extern crate simplelog;
+
+use simplelog::TermLogger;
+
+extern crate vfio_motion_client;
+
+use vfio_motion_client::config::Config;
 
 fn main() {
-    let conn = libvirt::Connection::open("qemu+tcp://10.0.122.1/system").unwrap();
-    for domain in conn.list_all_domains(1).unwrap() {
-        println!("got domain: {}", domain.get_name().unwrap());
+    let config = Config::default();
+    TermLogger::init(config.log_level(), simplelog::Config::default()).unwrap();
+
+    if let Err(e) = vfio_motion_client::run(config) {
+        error!("{}", e);
+        process::exit(1);
     }
 }
