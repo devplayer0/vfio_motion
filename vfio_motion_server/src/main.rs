@@ -3,24 +3,21 @@ use std::process;
 
 #[macro_use]
 extern crate log;
+
 extern crate simplelog;
 extern crate clap;
-extern crate config;
+extern crate config as config_rs;
 
 use log::LevelFilter;
 use simplelog::TermLogger;
+use config_rs::Config as ConfigRs;
+use config_rs::ConfigError;
 
+#[macro_use]
+extern crate vfio_motion_common;
 extern crate vfio_motion_server;
+use vfio_motion_common::util::SingleItemSource;
 use vfio_motion_server::config::Config;
-use vfio_motion_server::util::SingleItemSource;
-
-macro_rules! merge_arg {
-    ($args:ident, $config:ident, $key:expr) => (
-        if $args.is_present($key) {
-            $config.merge(SingleItemSource::new($key, $args.value_of($key).unwrap().to_string()))?;
-        }
-    )
-}
 
 fn args<'a>() -> clap::ArgMatches<'a> {
     clap::App::new("vfio-motion server")
@@ -56,15 +53,15 @@ fn args<'a>() -> clap::ArgMatches<'a> {
              .takes_value(true))
         .get_matches()
 }
-fn load_config(args: clap::ArgMatches) -> Result<Config, config::ConfigError> {
-    let mut config = self::config::Config::default();
+fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
+    let mut config = ConfigRs::default();
     config.set_default("log_level", LevelFilter::Info.to_string())?;
     config.set_default("libvirt_uri", "qemu:///system")?;
     config.set_default("http.address", "127.0.0.1")?;
     config.set_default("http.port", 3020)?;
 
 
-    config.merge(config::File::with_name(args.value_of("config").unwrap()).required(false))?;
+    config.merge(config_rs::File::with_name(args.value_of("config").unwrap()).required(false))?;
 
     merge_arg!(args, config, "libvirt_uri");
     merge_arg!(args, config, "http.address");
@@ -76,7 +73,7 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, config::ConfigError> {
         2 | _ => LevelFilter::Trace,
     }).to_string()))?;
 
-    config.merge(config::Environment::with_prefix("VFIO_MOTION"))?;
+    config.merge(config_rs::Environment::with_prefix("VFIO_MOTION"))?;
 
 
     config.try_into()

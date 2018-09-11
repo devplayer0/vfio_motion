@@ -7,9 +7,12 @@ authors = ["dev <jackos1998@gmail.com>"]
 quick-error = "~1.2"
 log = "~0.4"
 simplelog = "~0.5"
+clap = "~2.32"
 serde = "~1.0"
 serde_derive = "~1.0"
+config = "~0.9"
 reqwest = "~0.8"
 widestring = "0.4"
 winapi = { version = "0.3", features = [ "errhandlingapi", "winbase", "winnt",  "winuser", "wincon", "consoleapi", "processthreadsapi" ] }
-#vfio_motion_common = { path = "../vfio_motion_common" }
+gtk = { version = "0.4", features = [ "v3_10" ] }
+vfio_motion_common = { path = "../vfio_motion_common" }

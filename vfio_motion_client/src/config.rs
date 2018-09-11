@@ -1,33 +1,40 @@
+use std::error::Error;
+
 use ::log::LevelFilter;
+use ::config_rs::ConfigError;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Libvirt {
+    pub uri: String,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Http {
+    pub url: String,
+}
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    log_level: LevelFilter,
+    log_level: String,
 
-    host: String,
-    domain: String,
-    devices: Vec<String>,
+    pub libvirt: Libvirt,
+    pub http: Http,
+
+    pub domain: String,
+    pub devices: Vec<String>,
+
+    #[serde(skip)]
+    pub is_service: bool,
+    #[serde(skip)]
+    _log_level: Option<LevelFilter>,
 }
 impl Config {
-    pub fn log_level(&self) -> LevelFilter {
-        self.log_level
-    }
-    pub fn host(&self) -> &str {
-        &self.host
-    }
-    pub fn domain(&self) -> &str {
-        &self.domain
-    }
-    pub fn devices(&self) -> &Vec<String> {
-        &self.devices
-    }
-}
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            log_level: LevelFilter::Info,
-            host: String::from("http://10.0.122.1:3020"),
-            domain: String::from("gpu"),
-            devices: vec![String::from("/dev/input/by-id/usb-Logitech_G203_Prodigy_Gaming_Mouse_0487365B3837-event-mouse"), String::from("/dev/input/by-id/usb-04d9_USB_Keyboard-event-kbd")],
+    pub fn log_level(&mut self) -> Result<LevelFilter, ConfigError> {
+        match self._log_level {
+            Some(v) => Ok(v),
+            None => {
+                let v = self.log_level.parse().map_err(|e: ::log::ParseLevelError| ::config_rs::ConfigError::Message(e.description().to_string()))?;
+                self._log_level = Some(v);
+                Ok(v)
+            }
         }
     }
 }
