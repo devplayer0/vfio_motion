@@ -8,6 +8,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate simplelog;
 extern crate config as config_rs;
 extern crate reqwest;
 extern crate widestring;
@@ -18,19 +19,19 @@ pub mod config;
 mod input;
 mod win;
 mod service;
-mod gui;
+pub mod gui;
 
 use config::Config;
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     if config.is_service {
-        info!("starting service...");
+        debug!("starting service...");
         service::run(config)?;
     } else {
-        info!("starting gui...");
+        debug!("starting gui...");
         gui::run(config)?;
     }
 
-    info!("shutting down...");
+    debug!("shutting down...");
     Ok(())
 }

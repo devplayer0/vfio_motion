@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::path::{Path, PathBuf};
 
 use ::log::LevelFilter;
 use ::config_rs::ConfigError;
@@ -14,6 +15,7 @@ pub struct Http {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     log_level: String,
+    pub log_dir: String,
 
     pub libvirt: Libvirt,
     pub http: Http,
@@ -36,5 +38,14 @@ impl Config {
                 Ok(v)
             }
         }
+    }
+    pub fn log_file(&self) -> PathBuf {
+        Path::new(&self.log_dir).join(
+            if self.is_service {
+                "service.log"
+            } else {
+                "gui.log"
+            }
+        )
     }
 }

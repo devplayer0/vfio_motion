@@ -19,6 +19,11 @@ extern crate vfio_motion_server;
 use vfio_motion_common::util::SingleItemSource;
 use vfio_motion_server::config::Config;
 
+#[cfg(build = "debug")]
+const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Debug;
+#[cfg(build = "release")]
+const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Info;
+
 fn args<'a>() -> clap::ArgMatches<'a> {
     clap::App::new("vfio-motion server")
         .version("0.1")
@@ -55,7 +60,7 @@ fn args<'a>() -> clap::ArgMatches<'a> {
 }
 fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     let mut config = ConfigRs::default();
-    config.set_default("log_level", LevelFilter::Info.to_string())?;
+    config.set_default("log_level", DEFAULT_LOG_LEVEL.to_string())?;
     config.set_default("libvirt_uri", "qemu:///system")?;
     config.set_default("http.address", "127.0.0.1")?;
     config.set_default("http.port", 3020)?;

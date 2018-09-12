@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["dev <jackos1998@gmail.com>"]
 
 [dependencies]
+lazy_static = "~1.1"
 quick-error = "~1.2"
 log = "~0.4"
 simplelog = "~0.5"

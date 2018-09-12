@@ -1,15 +1,23 @@
-use std::process;
-use std::cmp;
+#![cfg_attr(build = "release", windows_subsystem = "windows")]
 
+use std::cmp;
+use std::process;
+use std::env;
+use std::fs::{self, File};
+use std::path::PathBuf;
+
+#[macro_use]
+extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
 extern crate simplelog;
 extern crate clap;
 extern crate config as config_rs;
+extern crate gtk;
 
 use log::LevelFilter;
-use simplelog::TermLogger;
+use simplelog::{CombinedLogger, WriteLogger};
 use config_rs::Config as ConfigRs;
 use config_rs::ConfigError;
 
@@ -18,6 +26,17 @@ extern crate vfio_motion_client;
 
 use vfio_motion_common::util::SingleItemSource;
 use vfio_motion_client::config::Config;
+use vfio_motion_client::gui::MessageBoxLogger;
+
+#[cfg(build = "debug")]
+const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Debug;
+#[cfg(build = "release")]
+const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Info;
+
+lazy_static! {
+    static ref DEFAULT_DIR: PathBuf = PathBuf::from(env::var("APPDATA").unwrap()).join("vfio_motion");
+    static ref DEFAULT_CONFIG_FILE: String = DEFAULT_DIR.join("vfio_motion").to_string_lossy().to_string();
+}
 
 fn args<'a>() -> clap::ArgMatches<'a> {
     clap::App::new("vfio-motion client")
@@ -28,7 +47,7 @@ fn args<'a>() -> clap::ArgMatches<'a> {
              .long("config")
              .value_name("FILE")
              .help("Set config file path")
-             .default_value("%APPDATA%/vfio-motion.toml")
+             .default_value(&DEFAULT_CONFIG_FILE)
              .takes_value(true))
         .arg(clap::Arg::with_name("daemon")
              .short("d")
@@ -42,7 +61,8 @@ fn args<'a>() -> clap::ArgMatches<'a> {
 }
 fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     let mut config = ConfigRs::default();
-    config.set_default("log_level", LevelFilter::Info.to_string())?;
+    config.set_default("log_level", DEFAULT_LOG_LEVEL.to_string())?;
+    config.set_default("log_dir", DEFAULT_DIR.to_str().unwrap())?;
     config.set_default("libvirt.uri", "qemu+tcp://10.0.122.1/system")?;
     config.set_default("http.url", "http://127.0.0.1:3020")?;
     config.set_default("domain", "gpu")?;
@@ -50,7 +70,7 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
 
     config.merge(config_rs::File::with_name(args.value_of("config").unwrap()).required(false))?;
 
-    let mut cur_config: Config = config.clone().try_into().unwrap();
+    let mut cur_config: Config = config.clone().try_into()?;
     config.merge(SingleItemSource::new("log_level", cmp::max(cur_config.log_level()?, match args.occurrences_of("v") {
         0 => cur_config.log_level()?,
         1 => LevelFilter::Debug,
@@ -61,9 +81,32 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     conf.is_service = args.is_present("daemon");
     Ok(conf)
 }
+fn configure() -> Result<Config, Box<dyn std::error::Error>> {
+    let mut config = load_config(args())?;
+    fs::create_dir_all(&config.log_dir)?;
+
+    let log_level = config.log_level()?;
+
+    CombinedLogger::init(vec![
+        WriteLogger::new(log_level, simplelog::Config::default(), File::create(config.log_file())?),
+        MessageBoxLogger::new(LevelFilter::Error),
+        #[cfg(build = "debug")]
+        simplelog::TermLogger::new(log_level, simplelog::Config::default()).unwrap(),
+    ])?;
+
+    Ok(config)
+}
+
 fn main() {
-    let mut config = load_config(args()).unwrap();
-    TermLogger::init(config.log_level().unwrap(), simplelog::Config::default()).unwrap();
+    gtk::init().unwrap();
+
+    let config = match configure() {
+        Ok(c) => c,
+        Err(e) => {
+            error!("{}", e);
+            process::exit(1);
+        }
+    };
 
     if let Err(e) = vfio_motion_client::run(config) {
         error!("{}", e);
