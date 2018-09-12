@@ -17,12 +17,14 @@ pub struct Config {
     log_level: String,
     pub log_dir: String,
 
+    pub native: bool,
     pub libvirt: Libvirt,
     pub http: Http,
 
     pub domain: String,
     pub devices: Vec<String>,
 
+    pub service_startup: bool,
     #[serde(skip)]
     pub is_service: bool,
     #[serde(skip)]

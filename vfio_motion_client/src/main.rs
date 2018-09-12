@@ -1,5 +1,6 @@
 #![cfg_attr(build = "release", windows_subsystem = "windows")]
 
+#[cfg(build = "release")]
 use std::ops::Deref;
 use std::cmp;
 use std::process;
@@ -67,10 +68,12 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     let mut config = ConfigRs::default();
     config.set_default("log_level", DEFAULT_LOG_LEVEL.to_string())?;
     config.set_default("log_dir", DEFAULT_DIR.to_str().unwrap())?;
+    config.set_default("native", true)?;
     config.set_default("libvirt.uri", "qemu+tcp://10.0.122.1/system")?;
     config.set_default("http.url", "http://127.0.0.1:3020")?;
     config.set_default("domain", "gpu")?;
     config.set_default("devices", Vec::new() as Vec<String>)?;
+    config.set_default("service_startup", false)?;
 
     config.merge(config_rs::File::with_name(args.value_of("config").unwrap()).required(false))?;
 

@@ -39,8 +39,52 @@ impl SharedLogger for MessageBoxLogger {
     }
 }
 
-pub fn run(_config: Config) -> Result<(), Box<dyn Error>> {
+struct ConfigUi {
+    changed: bool,
+
+    libvirt_mode: gtk::ComboBox,
+    domains: gtk::ListStore,
+    domain: gtk::ComboBox,
+    service_startup: gtk::Switch,
+    shortcut: gtk::Button,
+    libvirt_uri: gtk::Entry,
+    http_url: gtk::Entry,
+    log_dir: gtk::FileChooser,
+}
+impl ConfigUi {
+    pub fn new(builder: &gtk::Builder) -> ConfigUi {
+        let libvirt_mode    = builder.get_object("libvirt_mode").unwrap();
+        let domains         = builder.get_object("domains").unwrap();
+        let domain          = builder.get_object("domain").unwrap();
+        let service_startup = builder.get_object("service_startup").unwrap();
+        let shortcut        = builder.get_object("shortcut").unwrap();
+        let libvirt_uri     = builder.get_object("libvirt_uri").unwrap();
+        let http_url        = builder.get_object("http_url").unwrap();
+        let log_dir         = builder.get_object("log_dir").unwrap();
+
+        ConfigUi {
+            changed: false, libvirt_mode, domains, domain, service_startup, shortcut, libvirt_uri, http_url, log_dir,
+        }
+    }
+
+    pub fn load(&self, config: &Config) {
+        self.libvirt_mode.set_active_id(if config.native {
+            "native"
+        } else {
+            "http"
+        });
+        self.service_startup.set_active(config.service_startup);
+        self.libvirt_uri.set_text(&config.libvirt.uri);
+        self.http_url.set_text(&config.http.url);
+        self.log_dir.set_filename(&config.log_dir);
+    }
+}
+
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let builder = gtk::Builder::new_from_string(GLADE_SRC);
+
+    let ui_config = ConfigUi::new(&builder);
+    ui_config.load(&config);
 
     let window: gtk::Window = builder.get_object("window").unwrap();
     window.show_all();
