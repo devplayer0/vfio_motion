@@ -14,4 +14,5 @@ RUN gpg --recv-keys 9766E084FB0F43D8 && \
 	yay -S --noconfirm --noremovemake mingw-w64-gtk3 && \
 	yay -R --noconfirm mingw-w64-wine mingw-w64-rust-bin && \
 	yay -S --noconfirm mingw-w64-libvirt && \
+	yay -S --noconfirm mingw-w64-ldd && \
 	yay --noconfirm --clean && paccache --remove --keep 0
