@@ -4,7 +4,7 @@ use ::rocket::http::Status;
 use ::rocket::response::status;
 use ::rocket_contrib::{SerdeError, Json};
 
-use input::{self, Device};
+use ::input::{self, Device, NativeDevice, Domains, NativeDomains};
 
 macro_rules! error_msg {
     ($name:ident, $status:ident, $err:ty) => (
@@ -25,8 +25,18 @@ impl ErrorMsg {
     error_msg!(input, InternalServerError, input::Error);
 }
 
-#[post("/", data="<device>")]
-fn attach(device: Result<Json<Device>, SerdeError>) -> Result<status::NoContent, status::Custom<Json<ErrorMsg>>> {
+#[post("/device/status", data="<device>")]
+fn attached(device: Result<Json<NativeDevice>, SerdeError>) -> Result<Json, status::Custom<Json<ErrorMsg>>> {
+    match device {
+        Ok(Json(d)) => {
+            debug!("handling status of evdev at '{:?}'", d.evdev());
+            Ok(Json(json!({ "attached": d.attached() })))
+        },
+        Err(e) => Err(ErrorMsg::serde(e))
+    }
+}
+#[post("/device", data="<device>")]
+fn attach(device: Result<Json<NativeDevice>, SerdeError>) -> Result<status::NoContent, status::Custom<Json<ErrorMsg>>> {
     match device {
         Ok(Json(d)) => {
             debug!("handling attach of evdev at '{:?}'", d.evdev());
@@ -38,8 +48,8 @@ fn attach(device: Result<Json<Device>, SerdeError>) -> Result<status::NoContent,
         Err(e) => Err(ErrorMsg::serde(e))
     }
 }
-#[delete("/", data="<device>")]
-fn detach(device: Result<Json<Device>, SerdeError>) -> Result<status::NoContent, status::Custom<Json<ErrorMsg>>> {
+#[delete("/device", data="<device>")]
+fn detach(device: Result<Json<NativeDevice>, SerdeError>) -> Result<status::NoContent, status::Custom<Json<ErrorMsg>>> {
     match device {
         Ok(Json(d)) => {
             debug!("handling detach of evdev at '{:?}'", d.evdev());
@@ -49,6 +59,14 @@ fn detach(device: Result<Json<Device>, SerdeError>) -> Result<status::NoContent,
             }
         },
         Err(e) => Err(ErrorMsg::serde(e))
+    }
+}
+
+#[get("/domains")]
+fn domains() -> Result<Json, status::Custom<Json<ErrorMsg>>> {
+    match NativeDomains::new(input::get_native_global_conn().unwrap()).list() {
+        Ok(doms) => Ok(Json(json!(doms))),
+        Err(e) => Err(ErrorMsg::input(e))
     }
 }
 
@@ -64,7 +82,7 @@ fn internal_error() -> Json {
 pub fn run(config: Config) -> LaunchError {
     // Unfortunately since were using the same log framework as Rocket, log to false has no effect
     ::rocket::custom(config, ::log::max_level() >= ::log::LevelFilter::Debug)
-        .mount("/", routes![attach, detach])
+        .mount("/", routes![attached, attach, detach, domains])
         .catch(catchers![not_found, internal_error])
         .launch()
 }

@@ -40,7 +40,7 @@ const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
 lazy_static! {
     static ref DEFAULT_DIR: PathBuf = PathBuf::from(env::var("APPDATA").unwrap()).join("vfio_motion");
-    static ref DEFAULT_CONFIG_FILE: String = DEFAULT_DIR.join("vfio_motion").to_string_lossy().to_string();
+    static ref DEFAULT_CONFIG_FILE: String = DEFAULT_DIR.join("config.toml").to_string_lossy().to_string();
 }
 
 fn args<'a>() -> clap::ArgMatches<'a> {
@@ -70,7 +70,7 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     config.set_default("log_dir", DEFAULT_DIR.to_str().unwrap())?;
     config.set_default("native", true)?;
     config.set_default("libvirt.uri", "qemu+tcp://10.0.122.1/system")?;
-    config.set_default("http.url", "http://127.0.0.1:3020")?;
+    config.set_default("http.url", "http://10.0.122.1:3020")?;
     config.set_default("domain", "gpu")?;
     config.set_default("devices", Vec::new() as Vec<String>)?;
     config.set_default("service_startup", false)?;

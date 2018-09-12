@@ -10,13 +10,15 @@ extern crate serde_derive;
 
 extern crate simplelog;
 extern crate config as config_rs;
+extern crate virt;
 extern crate reqwest;
 extern crate widestring;
 extern crate winapi;
 extern crate gtk;
 
+extern crate vfio_motion_common;
+
 pub mod config;
-mod input;
 pub mod win;
 mod service;
 pub mod gui;

@@ -1740,6 +1740,7 @@ dependencies = [
  "serde_derive 1.0.75 (registry+https://github.com/rust-lang/crates.io-index)",
  "simplelog 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vfio_motion_common 0.1.0",
+ "virt 0.2.8 (git+https://github.com/devplayer0/libvirt-rust)",
  "widestring 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1751,8 +1752,11 @@ dependencies = [
  "config 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nix 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "reqwest 0.8.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.75 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.75 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "virt 0.2.8 (git+https://github.com/devplayer0/libvirt-rust)",
 ]
@@ -1764,7 +1768,6 @@ dependencies = [
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "config 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "nix 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocket 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocket_codegen 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1775,21 +1778,13 @@ dependencies = [
  "simple-signal 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "simplelog 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vfio_motion_common 0.1.0",
- "virt 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "virt 0.2.8 (git+https://github.com/devplayer0/libvirt-rust)",
 ]
 
 [[package]]
 name = "virt"
 version = "0.2.8"
 source = "git+https://github.com/devplayer0/libvirt-rust#c90c39f712d47a2f8bda55382dc3da22dc78f5a4"
-dependencies = [
- "libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "virt"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2057,7 +2052,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum vec_map 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "05c78687fb1a80548ae3250346c3db86a80a7cdd77bda190189f2d0a0987c81a"
 "checksum version_check 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "7716c242968ee87e5542f8021178248f267f295a5c4803beae8b8b7fd9bc6051"
 "checksum virt 0.2.8 (git+https://github.com/devplayer0/libvirt-rust)" = "<none>"
-"checksum virt 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "4660f9ff36847dbbbe52bd00f5b01ab4dc98fbc28f690f8dbf5b2323ed14234c"
 "checksum void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 "checksum want 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "a05d9d966753fa4b5c8db73fcab5eed4549cfe0e1e4e66911e5564a0085c35d1"
 "checksum widestring 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "effc0e4ff8085673ea7b9b2e3c73f6bd4d118810c9009ed8f1e16bd96c331db6"
