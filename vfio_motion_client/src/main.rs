@@ -1,5 +1,6 @@
 #![cfg_attr(build = "release", windows_subsystem = "windows")]
 
+use std::ops::Deref;
 use std::cmp;
 use std::process;
 use std::env;
@@ -24,8 +25,11 @@ use config_rs::ConfigError;
 extern crate vfio_motion_common;
 extern crate vfio_motion_client;
 
+#[cfg(build = "release")]
+use vfio_motion_client::win::error_mbox;
 use vfio_motion_common::util::SingleItemSource;
 use vfio_motion_client::config::Config;
+#[cfg(build = "release")]
 use vfio_motion_client::gui::MessageBoxLogger;
 
 #[cfg(build = "debug")]
@@ -89,6 +93,7 @@ fn configure() -> Result<Config, Box<dyn std::error::Error>> {
 
     CombinedLogger::init(vec![
         WriteLogger::new(log_level, simplelog::Config::default(), File::create(config.log_file())?),
+        #[cfg(build = "release")]
         MessageBoxLogger::new(LevelFilter::Error),
         #[cfg(build = "debug")]
         simplelog::TermLogger::new(log_level, simplelog::Config::default()).unwrap(),
@@ -98,6 +103,18 @@ fn configure() -> Result<Config, Box<dyn std::error::Error>> {
 }
 
 fn main() {
+    #[cfg(build = "release")]
+    std::panic::set_hook(Box::new(|info| {
+        let (filename, line) =
+            info.location().map(|loc| (loc.file(), loc.line()))
+                .unwrap_or(("<unknown>", 0));
+
+        let cause = info.payload().downcast_ref::<String>().map(String::deref);
+        let cause = cause.unwrap_or_else(|| info.payload().downcast_ref::<&str>().map(|s| *s).unwrap_or("<cause unknown>"));
+
+        error_mbox(&format!("Panic occurred at {}:{}: {}", filename, line, cause));
+    }));
+
     gtk::init().unwrap();
 
     let config = match configure() {

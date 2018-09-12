@@ -17,7 +17,7 @@ extern crate gtk;
 
 pub mod config;
 mod input;
-mod win;
+pub mod win;
 mod service;
 pub mod gui;
 

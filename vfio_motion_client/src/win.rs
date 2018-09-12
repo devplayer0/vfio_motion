@@ -2,14 +2,14 @@ use std::ptr;
 use std::mem;
 use std::sync::atomic::{Ordering, AtomicIsize};
 
-use ::widestring::U16String;
+use ::widestring::{U16String, U16CString};
 use ::winapi::ctypes::c_void;
 use ::winapi::shared::minwindef::{BOOL, FALSE, TRUE};
 use ::winapi::um::errhandlingapi::GetLastError;
 use ::winapi::um::winbase::{self, LocalFree, FormatMessageW};
 use ::winapi::um::winnt::{self, LPWSTR};
 use ::winapi::um::consoleapi::SetConsoleCtrlHandler;
-use ::winapi::um::winuser::{self, RegisterHotKey, UnregisterHotKey, PostQuitMessage, PostMessageW, PostThreadMessageW, GetMessageW};
+use ::winapi::um::winuser::{self, MessageBoxW, RegisterHotKey, UnregisterHotKey, PostQuitMessage, PostMessageW, PostThreadMessageW, GetMessageW};
 use ::winapi::um::processthreadsapi::GetCurrentThreadId;
 
 quick_error! {
@@ -42,6 +42,12 @@ pub fn last_error() -> String {
         LocalFree(msg_buf as *mut c_void);
 
         message
+    }
+}
+
+pub fn error_mbox(msg: &str) {
+    unsafe {
+        MessageBoxW(ptr::null_mut(), U16CString::from_str(msg).unwrap().as_ptr(), U16CString::from_str("Error").unwrap().as_ptr(), winuser::MB_OK);
     }
 }
 
