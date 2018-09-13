@@ -27,10 +27,10 @@ use config::Config;
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     if config.is_service {
-        debug!("starting service...");
+        info!("starting service...");
         service::run(config)?;
     } else {
-        debug!("starting gui...");
+        info!("starting gui...");
         gui::run(config)?;
     }
 

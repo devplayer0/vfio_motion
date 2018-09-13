@@ -127,6 +127,8 @@ impl Hotkey {
             if RegisterHotKey(ptr::null_mut(), id, modifiers as u32, key as u32) == 0 {
                 return Err(Error::Win32);
             }
+
+            trace!("registered hotkey {}", id);
         }
 
         Ok(Hotkey(id))

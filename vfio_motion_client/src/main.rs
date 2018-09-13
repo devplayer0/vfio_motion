@@ -92,8 +92,12 @@ fn configure() -> Result<Config, Box<dyn std::error::Error>> {
     let mut config = load_config(args())?;
     fs::create_dir_all(&config.log_dir)?;
 
-    let log_level = config.log_level()?;
+    let log_file = config.log_file();
+    if log_file.exists() {
+        fs::copy(&log_file, format!("{}.old", log_file.to_string_lossy()))?;
+    }
 
+    let log_level = config.log_level()?;
     CombinedLogger::init(vec![
         WriteLogger::new(log_level, simplelog::Config::default(), File::create(config.log_file())?),
         #[cfg(build = "release")]
