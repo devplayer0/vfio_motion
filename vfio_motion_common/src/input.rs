@@ -90,12 +90,14 @@ pub trait Device {
 
     fn attach(&self) -> Result<(), Error>;
     fn detach(&self) -> Result<(), Error>;
-    fn toggle(&self) -> Result<(), Error> {
-        if self.attached() {
-            self.detach()
+    fn toggle(&self) -> Result<bool, Error> {
+        Ok(if self.attached() {
+            self.detach()?;
+            true
         } else {
-            self.attach()
-        }
+            self.attach()?;
+            false
+        })
     }
 }
 

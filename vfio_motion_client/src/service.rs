@@ -75,14 +75,17 @@ pub fn run(config: Config) -> Result<(), Box<dyn StdError>> {
 
         if hotkey.matches(&msg) {
             for device in &mut devices {
-                if let Err(e) = device.toggle() {
-                    error!("failed to toggle device at '{}' state: {}", device.evdev(), e);
-                    break;
+                match device.toggle() {
+                    Ok(a) => if !a {
+                        info!("attached device at '{}' to domain '{}'", device.evdev(), device.domain());
+                    } else {
+                        info!("detached device at '{}' from domain '{}'", device.evdev(), device.domain());
+                    }
+                    Err(e) => {
+                        error!("failed to toggle device at '{}' state: {}", device.evdev(), e);
+                        break;
+                    }
                 }
-                match device.attached() {
-                    true => info!("attached device at '{}' to domain '{}'", device.evdev(), device.domain()),
-                    false => info!("detached device at '{}' from domain '{}'", device.evdev(), device.domain())
-                };
 
                 // sleep for a bit or we'll end up with keys stuck down
                 thread::sleep(Duration::from_millis(300));
