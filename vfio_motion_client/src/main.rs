@@ -30,7 +30,6 @@ extern crate vfio_motion_client;
 use vfio_motion_client::win::error_mbox;
 use vfio_motion_common::util::SingleItemSource;
 use vfio_motion_client::config::Config;
-#[cfg(build = "release")]
 use vfio_motion_client::gui::MessageBoxLogger;
 
 #[cfg(build = "debug")]
@@ -75,7 +74,8 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     config.set_default("devices", Vec::new() as Vec<String>)?;
     config.set_default("service_startup", false)?;
 
-    config.merge(config_rs::File::with_name(args.value_of("config").unwrap()).required(false))?;
+    let config_file = args.value_of("config").unwrap();
+    config.merge(config_rs::File::with_name(config_file).required(false))?;
 
     let mut cur_config: Config = config.clone().try_into()?;
     config.merge(SingleItemSource::new("logging.level", cmp::max(cur_config.logging.level()?, match args.occurrences_of("v") {
@@ -85,6 +85,7 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     }).to_string()))?;
 
     let mut conf: Config = config.try_into()?;
+    conf.file = config_file.to_string();
     conf.is_service = args.is_present("daemon");
     Ok(conf)
 }
@@ -100,10 +101,9 @@ fn configure() -> Result<Config, Box<dyn std::error::Error>> {
     let log_level = config.logging.level()?;
     CombinedLogger::init(vec![
         WriteLogger::new(log_level, simplelog::Config::default(), File::create(config.log_file())?),
-        #[cfg(build = "release")]
-        MessageBoxLogger::new(LevelFilter::Error),
         #[cfg(build = "debug")]
         simplelog::TermLogger::new(log_level, simplelog::Config::default()).unwrap(),
+        MessageBoxLogger::new(LevelFilter::Warn),
     ])?;
 
     Ok(config)

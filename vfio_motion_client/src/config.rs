@@ -34,11 +34,10 @@ pub struct Http {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub logging: Logging,
+    #[serde(skip)]
+    pub file: String,
 
     pub native: bool,
-    pub libvirt: Libvirt,
-    pub http: Http,
 
     pub domain: String,
     pub devices: Vec<String>,
@@ -46,8 +45,16 @@ pub struct Config {
     pub service_startup: bool,
     #[serde(skip)]
     pub is_service: bool,
+
+    // tables must be last when writing toml
+    pub logging: Logging,
+    pub libvirt: Libvirt,
+    pub http: Http,
 }
 impl Config {
+    pub fn file(&self) -> &str {
+        &self.file
+    }
     pub fn log_file(&self) -> PathBuf {
         Path::new(&self.logging.dir).join(
             if self.is_service {

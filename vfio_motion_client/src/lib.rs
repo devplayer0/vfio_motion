@@ -10,6 +10,7 @@ extern crate serde_derive;
 
 extern crate simplelog;
 extern crate config as config_rs;
+extern crate toml;
 extern crate virt;
 extern crate reqwest;
 extern crate widestring;
@@ -26,7 +27,7 @@ mod service;
 pub mod gui;
 
 use vfio_motion_common::libvirt::Connection;
-use vfio_motion_common::input::{Input, NativeInput, HttpInput};
+use vfio_motion_common::input::{NativeInput, HttpInput};
 use config::Config;
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
