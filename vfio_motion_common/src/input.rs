@@ -36,6 +36,51 @@ quick_error! {
     }
 }
 
+pub trait Input {
+    fn domains(&self) -> Box<Domains + '_>;
+    fn device<'a>(&'a self, domain: &'a str, evdev: &'a str) -> Result<Box<Device + '_>, Error>;
+}
+
+pub struct NativeInput(Connection);
+impl NativeInput {
+    pub fn new<'a>(conn: Connection) -> Box<Input + 'a> {
+        Box::new(NativeInput(conn))
+    }
+}
+impl Input for NativeInput {
+    fn domains(&self) -> Box<Domains + '_> {
+        Box::new(NativeDomains::new(&self.0))
+    }
+    fn device(&self, domain: &str, evdev: &str) -> Result<Box<Device + '_>, Error> {
+        let dom = Domain::from(::virt::domain::Domain::lookup_by_name(&self.0, domain)?);
+        Ok(Box::new(NativeDevice::new(dom, evdev.to_string())?))
+    }
+}
+
+#[cfg(target_os = "windows")]
+pub struct HttpInput<'a> {
+    client: reqwest::Client,
+    host: &'a str,
+}
+#[cfg(target_os = "windows")]
+impl<'a> HttpInput<'a> {
+    pub fn new(client: reqwest::Client, host: &'a str) -> Box<Input + '_> {
+        Box::new(HttpInput {
+            client,
+            host
+        })
+    }
+}
+#[cfg(target_os = "windows")]
+impl<'a> Input for HttpInput<'a> {
+    fn domains(&self) -> Box<Domains + '_> {
+        Box::new(HttpDomains::new(&self.client, self.host))
+    }
+    fn device<'r>(&'r self, domain: &'r str, evdev: &'r str) -> Result<Box<Device + '_>, Error> {
+        Ok(Box::new(HttpDevice::new(&self.client, self.host, domain, evdev)))
+    }
+}
+
 pub trait Domains {
     fn list(&self) -> Result<Vec<String>, Error>;
 }
