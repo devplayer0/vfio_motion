@@ -120,7 +120,7 @@ impl<'a> ConfigUi<'a> {
         self.service_startup.set_active(conf.service_startup);
         self.libvirt_uri.set_text(&conf.libvirt.uri);
         self.http_url.set_text(&conf.http.url);
-        self.log_dir.set_filename(&conf.log_dir);
+        self.log_dir.set_filename(&conf.logging.dir);
 
         // Devices page
         self.devices.clear();
@@ -183,9 +183,9 @@ impl<'a> ConfigUi<'a> {
             upgrade_weak!(w_save).set_sensitive(true);
 
             let conf = upgrade_weak!(w_conf);
-            conf.borrow_mut().log_dir = ld.get_filename().unwrap().to_string_lossy().to_string();
+            conf.borrow_mut().logging.dir = ld.get_filename().unwrap().to_string_lossy().to_string();
 
-            trace!("log dir changed to {}", conf.borrow().log_dir);
+            trace!("log dir changed to {}", conf.borrow().logging.dir);
         }));
 
         Ok(())

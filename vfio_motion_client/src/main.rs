@@ -66,8 +66,8 @@ fn args<'a>() -> clap::ArgMatches<'a> {
 }
 fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     let mut config = ConfigRs::default();
-    config.set_default("log_level", DEFAULT_LOG_LEVEL.to_string())?;
-    config.set_default("log_dir", DEFAULT_DIR.to_str().unwrap())?;
+    config.set_default("logging.level", DEFAULT_LOG_LEVEL.to_string())?;
+    config.set_default("logging.dir", DEFAULT_DIR.to_str().unwrap())?;
     config.set_default("native", true)?;
     config.set_default("libvirt.uri", "qemu+tcp://10.0.122.1/system")?;
     config.set_default("http.url", "http://10.0.122.1:3020")?;
@@ -78,8 +78,8 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     config.merge(config_rs::File::with_name(args.value_of("config").unwrap()).required(false))?;
 
     let mut cur_config: Config = config.clone().try_into()?;
-    config.merge(SingleItemSource::new("log_level", cmp::max(cur_config.log_level()?, match args.occurrences_of("v") {
-        0 => cur_config.log_level()?,
+    config.merge(SingleItemSource::new("logging.level", cmp::max(cur_config.logging.level()?, match args.occurrences_of("v") {
+        0 => cur_config.logging.level()?,
         1 => LevelFilter::Debug,
         2 | _ => LevelFilter::Trace,
     }).to_string()))?;
@@ -90,14 +90,14 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
 }
 fn configure() -> Result<Config, Box<dyn std::error::Error>> {
     let mut config = load_config(args())?;
-    fs::create_dir_all(&config.log_dir)?;
+    fs::create_dir_all(&config.logging.dir)?;
 
     let log_file = config.log_file();
     if log_file.exists() {
         fs::copy(&log_file, format!("{}.old", log_file.to_string_lossy()))?;
     }
 
-    let log_level = config.log_level()?;
+    let log_level = config.logging.level()?;
     CombinedLogger::init(vec![
         WriteLogger::new(log_level, simplelog::Config::default(), File::create(config.log_file())?),
         #[cfg(build = "release")]

@@ -5,6 +5,26 @@ use ::log::LevelFilter;
 use ::config_rs::ConfigError;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Logging {
+    level: String,
+    pub dir: String,
+
+    #[serde(skip)]
+    _level: Option<LevelFilter>,
+}
+impl Logging {
+    pub fn level(&mut self) -> Result<LevelFilter, ConfigError> {
+        match self._level {
+            Some(v) => Ok(v),
+            None => {
+                let v = self.level.parse().map_err(|e: ::log::ParseLevelError| ::config_rs::ConfigError::Message(e.description().to_string()))?;
+                self._level = Some(v);
+                Ok(v)
+            }
+        }
+    }
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Libvirt {
     pub uri: String,
 }
@@ -14,8 +34,7 @@ pub struct Http {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    log_level: String,
-    pub log_dir: String,
+    pub logging: Logging,
 
     pub native: bool,
     pub libvirt: Libvirt,
@@ -27,22 +46,10 @@ pub struct Config {
     pub service_startup: bool,
     #[serde(skip)]
     pub is_service: bool,
-    #[serde(skip)]
-    _log_level: Option<LevelFilter>,
 }
 impl Config {
-    pub fn log_level(&mut self) -> Result<LevelFilter, ConfigError> {
-        match self._log_level {
-            Some(v) => Ok(v),
-            None => {
-                let v = self.log_level.parse().map_err(|e: ::log::ParseLevelError| ::config_rs::ConfigError::Message(e.description().to_string()))?;
-                self._log_level = Some(v);
-                Ok(v)
-            }
-        }
-    }
     pub fn log_file(&self) -> PathBuf {
-        Path::new(&self.log_dir).join(
+        Path::new(&self.logging.dir).join(
             if self.is_service {
                 "service.log"
             } else {
