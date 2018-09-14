@@ -4,15 +4,15 @@ use std::path::{Path, PathBuf};
 use ::log::LevelFilter;
 use ::config_rs::ConfigError;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Libvirt {
     pub uri: String,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Http {
     pub url: String,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     log_level: String,
     pub log_dir: String,

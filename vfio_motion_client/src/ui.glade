@@ -30,6 +30,8 @@
     <columns>
       <!-- column-name evdev -->
       <column type="gchararray"/>
+      <!-- column-name attached -->
+      <column type="gboolean"/>
     </columns>
   </object>
   <object class="GtkListStore" id="domains">
@@ -170,10 +172,11 @@
                                 <property name="can_focus">False</property>
                                 <property name="hexpand">True</property>
                                 <property name="model">domains</property>
+                                <property name="id_column">0</property>
                                 <child>
-                                  <object class="GtkCellRendererText" id="domain_renderer"/>
+                                  <object class="GtkCellRendererText"/>
                                   <attributes>
-                                    <attribute name="text">1</attribute>
+                                    <attribute name="text">0</attribute>
                                   </attributes>
                                 </child>
                               </object>
@@ -201,9 +204,9 @@
                                 <property name="can_focus">False</property>
                                 <property name="hexpand">True</property>
                                 <property name="model">connection_modes</property>
-                                <property name="active">0</property>
+                                <property name="id_column">0</property>
                                 <child>
-                                  <object class="GtkCellRendererText" id="connection_mode_renderer"/>
+                                  <object class="GtkCellRendererText"/>
                                   <attributes>
                                     <attribute name="text">1</attribute>
                                   </attributes>
@@ -499,25 +502,46 @@
                 <property name="orientation">vertical</property>
                 <property name="spacing">12</property>
                 <child>
-                  <object class="GtkTreeView">
+                  <object class="GtkScrolledWindow">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="model">devices</property>
-                    <property name="search_column">0</property>
-                    <property name="show_expanders">False</property>
-                    <child internal-child="selection">
-                      <object class="GtkTreeSelection" id="device"/>
-                    </child>
+                    <property name="shadow_type">in</property>
                     <child>
-                      <object class="GtkTreeViewColumn">
-                        <property name="title" translatable="yes">Event device path</property>
+                      <object class="GtkTreeView">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="model">devices</property>
+                        <property name="search_column">0</property>
+                        <property name="show_expanders">False</property>
+                        <child internal-child="selection">
+                          <object class="GtkTreeSelection" id="selected_device"/>
+                        </child>
                         <child>
-                          <object class="GtkCellRendererText" id="evdev">
-                            <property name="editable">True</property>
+                          <object class="GtkTreeViewColumn">
+                            <property name="resizable">True</property>
+                            <property name="title" translatable="yes">Event device path</property>
+                            <property name="expand">True</property>
+                            <child>
+                              <object class="GtkCellRendererText">
+                                <property name="editable">True</property>
+                              </object>
+                              <attributes>
+                                <attribute name="text">0</attribute>
+                              </attributes>
+                            </child>
                           </object>
-                          <attributes>
-                            <attribute name="text">0</attribute>
-                          </attributes>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn">
+                            <property name="sizing">fixed</property>
+                            <property name="title" translatable="yes">Attached?</property>
+                            <child>
+                              <object class="GtkCellRendererToggle"/>
+                              <attributes>
+                                <attribute name="active">1</attribute>
+                              </attributes>
+                            </child>
+                          </object>
                         </child>
                       </object>
                     </child>
