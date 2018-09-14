@@ -12,9 +12,10 @@ clap = "~2.32"
 serde = "~1.0"
 serde_derive = "~1.0"
 config = "~0.9"
+toml = "~0.4"
 virt = { git = "https://github.com/devplayer0/libvirt-rust", version = "~0.2" }
 reqwest = "~0.8"
 widestring = "0.4"
 winapi = { version = "0.3", features = [ "errhandlingapi", "winbase", "winnt",  "winuser", "wincon", "consoleapi", "processthreadsapi" ] }
-gtk = { version = "0.4", features = [ "v3_14" ] }
+gtk = { version = "0.5", features = [ "v3_22_30" ] }
 vfio_motion_common = { path = "../vfio_motion_common" }
