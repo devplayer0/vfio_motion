@@ -16,6 +16,10 @@ toml = "~0.4"
 virt = { git = "https://github.com/devplayer0/libvirt-rust", version = "~0.2" }
 reqwest = "~0.8"
 widestring = "0.4"
+libc = "~0.2"
 winapi = { version = "0.3", features = [ "errhandlingapi", "winbase", "winnt",  "winuser", "wincon", "consoleapi", "processthreadsapi" ] }
+glib-sys = { version = "0.7", features = [ "v2_56" ] }
+gdk-sys = { version = "0.7", features = [ "v3_22" ] }
+gdk = { version = "0.9", features = [ "v3_22_30" ] }
 gtk = { version = "0.5", features = [ "v3_22_30" ] }
 vfio_motion_common = { path = "../vfio_motion_common" }

@@ -30,7 +30,7 @@ extern crate vfio_motion_client;
 use vfio_motion_client::win::error_mbox;
 use vfio_motion_common::util::SingleItemSource;
 use vfio_motion_client::config::Config;
-use vfio_motion_client::gui::MessageBoxLogger;
+use vfio_motion_client::gui::{self, MessageBoxLogger};
 
 #[cfg(build = "debug")]
 const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Debug;
@@ -59,6 +59,7 @@ fn args<'a>() -> clap::ArgMatches<'a> {
              .help("Start in daemon / service mode"))
         .arg(clap::Arg::with_name("v")
              .short("v")
+             .long("verbose")
              .multiple(true)
              .help("Print extra log messages"))
         .get_matches()
@@ -73,6 +74,7 @@ fn load_config(args: clap::ArgMatches) -> Result<Config, ConfigError> {
     config.set_default("domain", "gpu")?;
     config.set_default("devices", Vec::new() as Vec<String>)?;
     config.set_default("service_startup", false)?;
+    config.set_default("hotkey", gui::DEFAULT_HOTKEY)?;
 
     let config_file = args.value_of("config").unwrap();
     config.merge(config_rs::File::with_name(config_file).required(false))?;
@@ -127,8 +129,7 @@ fn main() {
     let config = match configure() {
         Ok(c) => c,
         Err(e) => {
-            error!("{}", e);
-            process::exit(1);
+            panic!("{}", e);
         }
     };
 

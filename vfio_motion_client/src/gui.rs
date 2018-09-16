@@ -1,11 +1,20 @@
 use std::error::Error;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::ptr;
 use std::fs;
 
 use ::log::{self, Log, LevelFilter};
 use ::simplelog::{self, SharedLogger};
 use ::toml;
+use ::libc;
+use ::winapi::um::winuser;
+use ::glib_sys;
+use ::gdk_sys;
+use ::gdk;
+use gdk::prelude::*;
+use gdk::enums::key;
+use gdk::ModifierType;
 use ::gtk;
 use gtk::prelude::*;
 use gtk::{MessageDialog, DialogFlags, MessageType, ButtonsType};
@@ -14,6 +23,47 @@ use ::vfio_motion_common::input::{self, Input};
 use ::config::Config;
 
 const GLADE_SRC: &'static str = include_str!("ui.glade");
+const MODIFIER_KEYS: [key::Key; 4] = [ key::Control_L, key::Control_R, key::Shift_L, key::Shift_R ];
+pub const DEFAULT_HOTKEY: &'static str = "<Primary>Tab";
+
+// no support for windows key in GTK on Windows :(
+pub fn win_hotkey(key: key::Key, mods: ModifierType) -> Result<(isize, u32), &'static str> {
+    let mut win_mods = 0;
+    if mods.contains(ModifierType::MOD1_MASK) {
+        win_mods |= winuser::MOD_ALT;
+    }
+    if mods.contains(ModifierType::CONTROL_MASK) {
+        win_mods |= winuser::MOD_CONTROL;
+    }
+    if mods.contains(ModifierType::SHIFT_MASK) {
+        win_mods |= winuser::MOD_SHIFT;
+    }
+
+    #[allow(unused_assignments)]
+    let mut win_key = 0;
+    unsafe {
+        let dpy = gdk_sys::gdk_display_get_default();
+        if dpy.is_null() {
+            return Err("failed to get default gdk display");
+        }
+        let keymap = gdk_sys::gdk_keymap_get_for_display(dpy);
+        if keymap.is_null() {
+            return Err("failed to get display keymap");
+        }
+
+        let mut keys = ptr::null_mut();
+        let mut n_keys = 0;
+        if gdk_sys::gdk_keymap_get_entries_for_keyval(keymap, key, &mut keys, &mut n_keys) == 0 {
+            return Err("failed to get keycodes for key");
+        }
+        assert_ne!(n_keys, 0);
+
+        win_key = (*keys).keycode;
+        glib_sys::g_free(keys as *mut libc::c_void);
+    }
+
+    Ok((win_mods, win_key))
+}
 
 pub struct MessageBoxLogger(LevelFilter);
 impl MessageBoxLogger {
@@ -50,6 +100,7 @@ struct ConfigUi<'a> {
     config: Rc<RefCell<Config>>,
     input: Box<Input + 'a>,
 
+    window: gtk::Window,
     save: gtk::Button,
     save_notification: gtk::InfoBar,
 
@@ -58,7 +109,7 @@ struct ConfigUi<'a> {
     domains: gtk::ListStore,
     domain: gtk::ComboBox,
     service_startup: gtk::Switch,
-    shortcut: gtk::Button,
+    hotkey: gtk::Button,
     libvirt_uri: gtk::Entry,
     http_url: gtk::Entry,
     log_dir: gtk::FileChooser,
@@ -76,7 +127,7 @@ impl<'a> ConfigUi<'a> {
         let domains             = builder.get_object("domains").unwrap();
         let domain              = builder.get_object("domain").unwrap();
         let service_startup     = builder.get_object("service_startup").unwrap();
-        let shortcut            = builder.get_object("shortcut").unwrap();
+        let hotkey              = builder.get_object("hotkey").unwrap();
         let libvirt_uri         = builder.get_object("libvirt_uri").unwrap();
         let http_url            = builder.get_object("http_url").unwrap();
         let log_dir             = builder.get_object("log_dir").unwrap();
@@ -95,16 +146,16 @@ impl<'a> ConfigUi<'a> {
             config: Rc::new(RefCell::new(config.clone())),
             input,
 
-            save, save_notification,
+            window, save, save_notification,
             // General page
-            libvirt_mode, domains, domain, service_startup, shortcut, libvirt_uri, http_url, log_dir,
+            libvirt_mode, domains, domain, service_startup, hotkey, libvirt_uri, http_url, log_dir,
             // Devices page
             devices,
         }
     }
 
     pub fn load(&mut self) -> Result<(), input::Error> {
-        let conf = self.config.borrow();
+        let mut conf = self.config.borrow_mut();
 
         // General page
         self.libvirt_mode.set_active_id(if conf.native {
@@ -128,6 +179,19 @@ impl<'a> ConfigUi<'a> {
         self.http_url.set_text(&conf.http.url);
         self.log_dir.set_filename(&conf.logging.dir);
 
+        {
+            let (mut h_key, mut h_mod) = gtk::accelerator_parse(&conf.hotkey);
+            if h_mod == ModifierType::empty() && h_key == 0 {
+                conf.hotkey = DEFAULT_HOTKEY.to_owned();
+                h_mod = ModifierType::CONTROL_MASK;
+                h_key = key::Tab;
+
+                self.save.set_sensitive(true);
+                error!("failed to parse hotkey '{}', using default...", conf.hotkey);
+            }
+            self.hotkey.set_label(&gtk::accelerator_get_label(h_key, h_mod).unwrap());
+        }
+
         // Devices page
         self.devices.clear();
         for dev in &conf.devices {
@@ -139,6 +203,7 @@ impl<'a> ConfigUi<'a> {
         self.save_notification.set_default_response(gtk::ResponseType::Close.into());
 
         let w_conf = Rc::downgrade(&self.config);
+        let w_window = self.window.downgrade();
         let w_save = self.save.downgrade();
 
         // General page
@@ -151,36 +216,85 @@ impl<'a> ConfigUi<'a> {
             };
 
             upgrade_weak!(w_save).set_sensitive(true);
-            trace!("libvirt mode changed, native?: {}", conf.borrow().native);
+            debug!("libvirt mode changed, native?: {}", conf.borrow().native);
         }));
         self.domain.connect_changed(clone!(w_conf, w_save => move |d| {
             let conf = upgrade_weak!(w_conf);
             conf.borrow_mut().domain = d.get_active_id().unwrap();
 
             upgrade_weak!(w_save).set_sensitive(true);
-            trace!("domain changed to {}", conf.borrow().domain);
+            debug!("domain changed to {}", conf.borrow().domain);
         }));
         self.service_startup.connect_state_set(clone!(w_conf, w_save => move |_, state| {
             let conf = upgrade_weak!(w_conf, Inhibit(false));
             conf.borrow_mut().service_startup = state;
 
             upgrade_weak!(w_save, Inhibit(false)).set_sensitive(true);
-            trace!("service startup changed: {}", state);
+            debug!("service startup changed: {}", state);
             Inhibit(false)
+        }));
+        self.hotkey.connect_clicked(clone!(w_conf, w_save, w_window => move |h| {
+            let conf = upgrade_weak!(w_conf);
+            let dpy = h.get_display().unwrap();
+            let kb = dpy.get_default_seat().unwrap().get_keyboard().unwrap();
+            let w_kb = kb.downgrade();
+
+            #[allow(deprecated)]
+            kb.grab(&dpy.get_default_screen().get_root_window().unwrap(),
+                    gdk::GrabOwnership::Window,
+                    true,
+                    gdk::EventMask::KEY_PRESS_MASK | gdk::EventMask::KEY_RELEASE_MASK,
+                    None,
+                    gdk_sys::GDK_CURRENT_TIME as u32);
+
+            let hotkey_accel = Rc::new(RefCell::new(String::default()));
+            let w_hk_accel = Rc::downgrade(&hotkey_accel);
+
+            let dialog = MessageDialog::new(Some(&upgrade_weak!(w_window)), DialogFlags::DESTROY_WITH_PARENT, MessageType::Question, ButtonsType::Cancel, "Enter a keyboard shortcut");
+            dialog.connect_key_press_event(clone!(w_hk_accel => move |_s, e| {
+                let name = gtk::accelerator_name(e.get_keyval(), e.get_state()).unwrap();
+                debug!("hotkey accel name: {}", name);
+                upgrade_weak!(w_hk_accel, Inhibit(false)).replace(name);
+
+                Inhibit(false)
+            }));
+            dialog.connect_key_release_event(clone!(w_kb => move |d, e| {
+                if MODIFIER_KEYS.contains(&e.get_keyval()) {
+                    return Inhibit(false);
+                }
+
+                #[allow(deprecated)]
+                upgrade_weak!(w_kb, Inhibit(false)).ungrab(gdk_sys::GDK_CURRENT_TIME as u32);
+                d.response(gtk::ResponseType::Apply.into());
+                Inhibit(false)
+            }));
+
+            if gtk::ResponseType::from(dialog.run()) == gtk::ResponseType::Apply && hotkey_accel.borrow().as_str() != conf.borrow().hotkey.as_str() {
+                conf.borrow_mut().hotkey = hotkey_accel.borrow().clone();
+                let (h_key, h_mod) = gtk::accelerator_parse(conf.borrow().hotkey.as_str());
+                h.set_label(&gtk::accelerator_get_label(h_key, h_mod).unwrap());
+
+                upgrade_weak!(w_save).set_sensitive(true);
+                debug!("hotkey changed to {}", conf.borrow().hotkey);
+            }
+            dialog.destroy();
+
+            #[allow(deprecated)]
+            kb.ungrab(gdk_sys::GDK_CURRENT_TIME as u32);
         }));
         self.libvirt_uri.connect_changed(clone!(w_conf, w_save => move |lvu| {
             let conf = upgrade_weak!(w_conf);
             conf.borrow_mut().libvirt.uri = lvu.get_text().unwrap();
 
             upgrade_weak!(w_save).set_sensitive(true);
-            trace!("libvirt uri changed to {}", conf.borrow().libvirt.uri);
+            debug!("libvirt uri changed to {}", conf.borrow().libvirt.uri);
         }));
         self.http_url.connect_changed(clone!(w_conf, w_save => move |hu| {
             let conf = upgrade_weak!(w_conf);
             conf.borrow_mut().http.url = hu.get_text().unwrap();
 
             upgrade_weak!(w_save).set_sensitive(true);
-            trace!("http url changed to {}", conf.borrow().http.url);
+            debug!("http url changed to {}", conf.borrow().http.url);
         }));
         self.log_dir.connect_selection_changed(clone!(w_conf, w_save => move |ld| {
             let conf = upgrade_weak!(w_conf);
@@ -191,7 +305,7 @@ impl<'a> ConfigUi<'a> {
             conf.borrow_mut().logging.dir = new_dir;
 
             upgrade_weak!(w_save).set_sensitive(true);
-            trace!("log dir changed to {}", conf.borrow().logging.dir);
+            debug!("log dir changed to {}", conf.borrow().logging.dir);
         }));
 
         let w_save_notif = self.save_notification.downgrade();

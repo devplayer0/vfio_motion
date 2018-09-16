@@ -173,7 +173,7 @@
                                 <property name="width_request">230</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="hexpand">True</property>
+                                <property name="halign">end</property>
                                 <property name="model">domains</property>
                                 <property name="id_column">0</property>
                                 <child>
@@ -192,6 +192,7 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
+                                <property name="hexpand">True</property>
                                 <property name="label" translatable="yes">Connection mode:</property>
                                 <property name="xalign">0</property>
                               </object>
@@ -205,7 +206,7 @@
                                 <property name="width_request">230</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="hexpand">True</property>
+                                <property name="halign">end</property>
                                 <property name="model">connection_modes</property>
                                 <property name="id_column">0</property>
                                 <child>
@@ -264,6 +265,7 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
+                                <property name="hexpand">True</property>
                                 <property name="label" translatable="yes">Run at startup:</property>
                                 <property name="xalign">0</property>
                               </object>
@@ -274,11 +276,9 @@
                             </child>
                             <child>
                               <object class="GtkSwitch" id="service_startup">
-                                <property name="width_request">96</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
-                                <property name="halign">start</property>
-                                <property name="hexpand">True</property>
+                                <property name="halign">end</property>
                               </object>
                               <packing>
                                 <property name="left_attach">1</property>
@@ -290,7 +290,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="tooltip_text" translatable="yes">Keyboard shortcut to attach / detach the configured input devices.</property>
-                                <property name="label" translatable="yes">Keyboard shortcut:</property>
+                                <property name="label" translatable="yes">Hotkey:</property>
                                 <property name="xalign">0</property>
                               </object>
                               <packing>
@@ -299,13 +299,12 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="shortcut">
-                                <property name="label" translatable="yes">button</property>
-                                <property name="width_request">230</property>
+                              <object class="GtkButton" id="hotkey">
+                                <property name="label" translatable="yes">&lt;None&gt;</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">True</property>
-                                <property name="hexpand">True</property>
+                                <property name="halign">end</property>
                               </object>
                               <packing>
                                 <property name="left_attach">1</property>
@@ -368,6 +367,7 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
+                                <property name="hexpand">True</property>
                                 <property name="label" translatable="yes">Native libvirt URI:</property>
                                 <property name="xalign">0</property>
                               </object>
@@ -380,7 +380,7 @@
                               <object class="GtkEntry" id="libvirt_uri">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
-                                <property name="hexpand">True</property>
+                                <property name="halign">end</property>
                               </object>
                               <packing>
                                 <property name="left_attach">1</property>
@@ -391,7 +391,7 @@
                               <object class="GtkEntry" id="http_url">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
-                                <property name="hexpand">True</property>
+                                <property name="halign">end</property>
                               </object>
                               <packing>
                                 <property name="left_attach">1</property>
@@ -442,6 +442,7 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
+                                <property name="hexpand">True</property>
                                 <property name="label" translatable="yes">Log file directory:</property>
                                 <property name="xalign">0</property>
                               </object>
@@ -454,7 +455,7 @@
                               <object class="GtkFileChooserButton" id="log_dir">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="hexpand">True</property>
+                                <property name="halign">end</property>
                                 <property name="action">select-folder</property>
                                 <property name="title" translatable="yes">Log file directory</property>
                               </object>
@@ -637,5 +638,17 @@
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkSizeGroup">
+    <property name="mode">both</property>
+    <widgets>
+      <widget name="domain"/>
+      <widget name="libvirt_mode"/>
+      <widget name="service_startup"/>
+      <widget name="hotkey"/>
+      <widget name="libvirt_uri"/>
+      <widget name="http_url"/>
+      <widget name="log_dir"/>
+    </widgets>
   </object>
 </interface>

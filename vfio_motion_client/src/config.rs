@@ -1,8 +1,12 @@
 use std::error::Error;
 use std::path::{Path, PathBuf};
 
+use ::gdk;
+use ::gtk;
+
 use ::log::LevelFilter;
 use ::config_rs::ConfigError;
+use ::gui;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Logging {
@@ -43,6 +47,8 @@ pub struct Config {
     pub devices: Vec<String>,
 
     pub service_startup: bool,
+    pub hotkey: String,
+
     #[serde(skip)]
     pub is_service: bool,
 
@@ -63,5 +69,14 @@ impl Config {
                 "gui.log"
             }
         )
+    }
+    pub fn win_hotkey(&self) -> Result<(isize, u32), ConfigError> {
+        let (key, mods) = gtk::accelerator_parse(&self.hotkey);
+        debug!("parsing key {:#x} with mods {:?}", key, mods);
+        if mods == gdk::ModifierType::empty() && key == 0 {
+            return Err(ConfigError::Message(format!("failed to parse hotkey '{}'", self.hotkey)));
+        }
+
+        gui::win_hotkey(key, mods).map_err(|e| ConfigError::Message(e.to_owned()))
     }
 }

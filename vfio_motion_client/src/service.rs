@@ -49,7 +49,8 @@ pub fn run(config: &Config, input_api: Box<Input + '_>) -> Result<(), Box<dyn St
         info!("configured evdev '{}'", device);
     }
 
-    let hotkey = Hotkey::new(winuser::MOD_CONTROL | winuser::MOD_NOREPEAT, winuser::VK_TAB)?;
+    let (mods, key) = config.win_hotkey()?;
+    let hotkey = Hotkey::new(mods | winuser::MOD_NOREPEAT, key)?;
     loop {
         let msg = win::get_message(0, 0)?;
         if msg.message == winuser::WM_DESTROY {

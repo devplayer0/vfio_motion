@@ -14,7 +14,11 @@ extern crate toml;
 extern crate virt;
 extern crate reqwest;
 extern crate widestring;
+extern crate libc;
 extern crate winapi;
+extern crate glib_sys;
+extern crate gdk_sys;
+extern crate gdk;
 extern crate gtk;
 
 extern crate vfio_motion_common;

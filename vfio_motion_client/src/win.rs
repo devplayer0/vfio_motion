@@ -121,10 +121,10 @@ pub fn get_message(filter_min: u32, filter_max: u32) -> Result<winuser::MSG, Err
 static HOTKEY_ID: AtomicIsize = AtomicIsize::new(0);
 pub struct Hotkey(i32);
 impl Hotkey {
-    pub fn new(modifiers: isize, key: i32) -> Result<Hotkey, Error> {
+    pub fn new(modifiers: isize, key: u32) -> Result<Hotkey, Error> {
         let id = HOTKEY_ID.fetch_add(1, Ordering::SeqCst) as i32;
         unsafe {
-            if RegisterHotKey(ptr::null_mut(), id, modifiers as u32, key as u32) == 0 {
+            if RegisterHotKey(ptr::null_mut(), id, modifiers as u32, key) == 0 {
                 return Err(Error::Win32);
             }
 
