@@ -58,26 +58,26 @@ impl Input for NativeInput {
 }
 
 #[cfg(target_os = "windows")]
-pub struct HttpInput<'a> {
+pub struct HttpInput {
     client: reqwest::Client,
-    host: &'a str,
+    host: String,
 }
 #[cfg(target_os = "windows")]
-impl<'a> HttpInput<'a> {
-    pub fn new(client: reqwest::Client, host: &'a str) -> Box<Input + '_> {
+impl HttpInput {
+    pub fn new<'a>(client: reqwest::Client, host: &str) -> Box<Input + 'a> {
         Box::new(HttpInput {
             client,
-            host
+            host: host.to_owned(),
         })
     }
 }
 #[cfg(target_os = "windows")]
-impl<'a> Input for HttpInput<'a> {
+impl Input for HttpInput {
     fn domains(&self) -> Box<Domains + '_> {
-        Box::new(HttpDomains::new(&self.client, self.host))
+        Box::new(HttpDomains::new(&self.client, &self.host))
     }
-    fn device<'r>(&'r self, domain: &'r str, evdev: &'r str) -> Result<Box<Device + '_>, Error> {
-        Ok(Box::new(HttpDevice::new(&self.client, self.host, domain, evdev)))
+    fn device<'a>(&'a self, domain: &'a str, evdev: &'a str) -> Result<Box<Device + '_>, Error> {
+        Ok(Box::new(HttpDevice::new(&self.client, &self.host, domain, evdev)))
     }
 }
 

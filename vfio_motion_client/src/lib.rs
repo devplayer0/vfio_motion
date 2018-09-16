@@ -30,25 +30,16 @@ pub mod win;
 mod service;
 pub mod gui;
 
-use vfio_motion_common::libvirt::Connection;
-use vfio_motion_common::input::{NativeInput, HttpInput};
 use config::Config;
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let input_api = if config.native {
-        info!("native backend, opening connection to libvirt...");
-        NativeInput::new(Connection::open(&config.libvirt.uri)?)
-    } else {
-        info!("http backend, creating client...");
-        HttpInput::new(reqwest::Client::new(), &config.http.url)
-    };
 
     if config.is_service {
         info!("starting service...");
-        service::run(&config, input_api)?;
+        service::run(&config)?;
     } else {
         info!("starting gui...");
-        gui::run(&config, input_api)?;
+        gui::run(&config)?;
     }
 
     debug!("shutting down...");

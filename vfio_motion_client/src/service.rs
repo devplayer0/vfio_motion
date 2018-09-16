@@ -4,11 +4,13 @@ use std::thread;
 
 use ::winapi::um::winuser;
 use ::winapi::um::wincon::{CTRL_C_EVENT, CTRL_CLOSE_EVENT};
+use ::reqwest;
 
 use ::config::Config;
 use ::win::{self, Hotkey};
 
-use ::vfio_motion_common::input::{Input, Device};
+use ::vfio_motion_common::libvirt::Connection;
+use ::vfio_motion_common::input::{NativeInput, HttpInput, Device};
 
 quick_error! {
     #[derive(Debug)]
@@ -21,7 +23,7 @@ quick_error! {
 
 static mut MAIN_THREAD_ID: u32 = 0;
 
-pub fn run(config: &Config, input_api: Box<Input + '_>) -> Result<(), Box<dyn StdError>> {
+pub fn run(config: &Config) -> Result<(), Box<dyn StdError>> {
     unsafe {
         MAIN_THREAD_ID = win::get_current_thread_id();
     }
@@ -43,9 +45,17 @@ pub fn run(config: &Config, input_api: Box<Input + '_>) -> Result<(), Box<dyn St
         return Err(Box::new(Error::NoDevices));
     }
 
+    let input = if config.native {
+        info!("native backend, opening connection to libvirt...");
+        NativeInput::new(Connection::open(&config.libvirt.uri)?)
+    } else {
+        info!("http backend, creating client...");
+        HttpInput::new(reqwest::Client::new(), &config.http.url)
+    };
+
     let mut devices: Vec<Box<Device>> = Vec::with_capacity(config.devices.len());
     for device in &config.devices {
-        devices.push(input_api.device(&config.domain, device)?);
+        devices.push(input.device(&config.domain, device)?);
         info!("configured evdev '{}'", device);
     }
 

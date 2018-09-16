@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ptr;
 use std::fs;
 
@@ -18,8 +18,11 @@ use gdk::ModifierType;
 use ::gtk;
 use gtk::prelude::*;
 use gtk::{MessageDialog, DialogFlags, MessageType, ButtonsType};
+use ::reqwest;
 
-use ::vfio_motion_common::input::{self, Input};
+use ::vfio_motion_common::libvirt::Connection;
+use ::vfio_motion_common::input::{self, Input, NativeInput, HttpInput};
+
 use ::config::Config;
 
 const GLADE_SRC: &'static str = include_str!("ui.glade");
@@ -96,9 +99,11 @@ impl SharedLogger for MessageBoxLogger {
     }
 }
 
-struct ConfigUi<'a> {
+struct ConfigUi {
     config: Rc<RefCell<Config>>,
-    input: Box<Input + 'a>,
+    conn_changed: Rc<Cell<bool>>,
+    input: Rc<RefCell<Option<Box<Input>>>>,
+    connect_and_reload: Rc<RefCell<Option<Box<Fn() -> bool>>>>,
 
     window: gtk::Window,
     save: gtk::Button,
@@ -117,8 +122,8 @@ struct ConfigUi<'a> {
     // Devices page
     devices: gtk::ListStore,
 }
-impl<'a> ConfigUi<'a> {
-    pub fn new(builder: gtk::Builder, config: &Config, input: Box<Input + 'a>) -> ConfigUi<'a> {
+impl ConfigUi {
+    pub fn new(builder: gtk::Builder, config: &Config) -> ConfigUi {
         let save                = builder.get_object("save").unwrap();
         let save_notification   = builder.get_object("save_notification").unwrap();
 
@@ -133,7 +138,7 @@ impl<'a> ConfigUi<'a> {
         let log_dir             = builder.get_object("log_dir").unwrap();
 
         // Devices page
-        let devices         = builder.get_object("devices").unwrap();
+        let devices             = builder.get_object("devices").unwrap();
 
         let window: gtk::Window = builder.get_object("window").unwrap();
         window.show_all();
@@ -144,7 +149,9 @@ impl<'a> ConfigUi<'a> {
 
         ConfigUi {
             config: Rc::new(RefCell::new(config.clone())),
-            input,
+            conn_changed: Rc::new(Cell::new(false)),
+            input: Rc::new(RefCell::new(None)),
+            connect_and_reload: Rc::new(RefCell::new(None)),
 
             window, save, save_notification,
             // General page
@@ -155,24 +162,73 @@ impl<'a> ConfigUi<'a> {
     }
 
     pub fn load(&mut self) -> Result<(), input::Error> {
-        let mut conf = self.config.borrow_mut();
+        let w_conf = Rc::downgrade(&self.config);
+
+        let w_input = Rc::downgrade(&self.input);
+        let w_domains = self.domains.downgrade();
+        let w_domain = self.domain.downgrade();
+        self.connect_and_reload.replace(Some(Box::new(clone!(w_conf, w_input, w_domains, w_domain => move || {
+            let conf = upgrade_weak!(w_conf, false);
+            let input = upgrade_weak!(w_input, false);
+            let domains = upgrade_weak!(w_domains, false);
+            let domain = upgrade_weak!(w_domain, false);
+
+            input.replace(if conf.borrow().native {
+                info!("native backend, opening connection to libvirt...");
+                let uri = &conf.borrow().libvirt.uri;
+                let conn = match Connection::open(uri) {
+                    Ok(c) => Some(c),
+                    Err(e) => {
+                        error!("failed to open connection to libvirtd on {}: {}", uri, e);
+                        None
+                    }
+                };
+                match conn {
+                    Some(c) => Some(NativeInput::new(c)),
+                    None => None
+                }
+            } else {
+                info!("http backend, creating client...");
+                Some(HttpInput::new(reqwest::Client::new(), &conf.borrow().http.url))
+            });
+
+            let input = &*input.borrow();
+            domains.clear();
+            if let Some(i) = input {
+                match i.domains().list() {
+                    Ok(doms) => {
+                        let mut i_dom = 0;
+                        for (i, dom) in doms.iter().enumerate() {
+                            if dom == &conf.borrow().domain {
+                                i_dom = i;
+                            }
+                            domains.set_value(&domains.append(), 0, &gtk::Value::from(dom));
+                        }
+                        domain.set_sensitive(true);
+                        domain.set_active(i_dom as i32);
+                    },
+                    Err(e) => {
+                        error!("failed to retrieve domain list: {}", e);
+                        domain.set_sensitive(false);
+                        return false;
+                    }
+                }
+            } else {
+                domain.set_sensitive(false);
+                return false;
+            }
+            true
+        }))));
 
         // General page
+        self.connect_and_reload.borrow().as_ref().unwrap()();
+
+        let mut conf = self.config.borrow_mut();
         self.libvirt_mode.set_active_id(if conf.native {
             "native"
         } else {
             "http"
         });
-
-        self.domains.clear();
-        let mut i_dom = 0;
-        for (i, dom) in self.input.domains().list()?.iter().enumerate() {
-            if dom == &conf.domain {
-                i_dom = i as i32;
-            }
-            self.domains.set_value(&self.domains.append(), 0, &gtk::Value::from(dom));
-        }
-        self.domain.set_active(i_dom);
 
         self.service_startup.set_active(conf.service_startup);
         self.libvirt_uri.set_text(&conf.libvirt.uri);
@@ -197,32 +253,63 @@ impl<'a> ConfigUi<'a> {
         for dev in &conf.devices {
             let tree_iter = self.devices.append();
             self.devices.set_value(&tree_iter, 0, &dev.to_value());
-            self.devices.set_value(&tree_iter, 1, &self.input.device(&conf.domain, dev)?.attached().to_value());
+
+            let attached = match *self.input.borrow() {
+                Some(ref i) => match i.device(&conf.domain, dev) {
+                    Ok(ref d) => {
+                        d.attached()
+                    },
+                    Err(_) => false
+                },
+                None => false
+            }.to_value();
+            self.devices.set_value(&tree_iter, 1, &attached);
         }
 
         self.save_notification.set_default_response(gtk::ResponseType::Close.into());
 
-        let w_conf = Rc::downgrade(&self.config);
         let w_window = self.window.downgrade();
         let w_save = self.save.downgrade();
+        let w_c_reload = Rc::downgrade(&self.connect_and_reload);
+        let w_c_changed = Rc::downgrade(&self.conn_changed);
 
         // General page
-        self.libvirt_mode.connect_changed(clone!(w_conf, w_save => move |lvm| {
+        self.libvirt_mode.connect_changed(clone!(w_conf, w_save, w_c_reload => move |lvm| {
             let conf = upgrade_weak!(w_conf);
+            let old_state = conf.borrow().native;
             conf.borrow_mut().native = match lvm.get_active_id().unwrap().as_ref() {
                 "native" => true,
                 "http" => false,
                 _ => panic!("can't happen!")
             };
 
-            upgrade_weak!(w_save).set_sensitive(true);
+            let c_reload = upgrade_weak!(w_c_reload);
+            if !c_reload.borrow().as_ref().unwrap()() {
+                conf.borrow_mut().native = old_state;
+                lvm.set_active_id(match old_state {
+                    true => "native",
+                    false => "http"
+                });
+                return;
+            }
+
+            if conf.borrow().native != old_state {
+                upgrade_weak!(w_save).set_sensitive(true);
+            }
             debug!("libvirt mode changed, native?: {}", conf.borrow().native);
         }));
         self.domain.connect_changed(clone!(w_conf, w_save => move |d| {
+            if let None = d.get_active_id() {
+                return;
+            }
+
             let conf = upgrade_weak!(w_conf);
+            let old = conf.borrow().domain.clone();
             conf.borrow_mut().domain = d.get_active_id().unwrap();
 
-            upgrade_weak!(w_save).set_sensitive(true);
+            if conf.borrow().domain != old {
+                upgrade_weak!(w_save).set_sensitive(true);
+            }
             debug!("domain changed to {}", conf.borrow().domain);
         }));
         self.service_startup.connect_state_set(clone!(w_conf, w_save => move |_, state| {
@@ -282,17 +369,25 @@ impl<'a> ConfigUi<'a> {
             #[allow(deprecated)]
             kb.ungrab(gdk_sys::GDK_CURRENT_TIME as u32);
         }));
-        self.libvirt_uri.connect_changed(clone!(w_conf, w_save => move |lvu| {
+        self.libvirt_uri.connect_changed(clone!(w_conf, w_save, w_c_changed => move |lvu| {
             let conf = upgrade_weak!(w_conf);
+            let old_uri = conf.borrow().libvirt.uri.clone();
             conf.borrow_mut().libvirt.uri = lvu.get_text().unwrap();
 
+            if conf.borrow().libvirt.uri != old_uri {
+                upgrade_weak!(w_c_changed).set(true);
+            }
             upgrade_weak!(w_save).set_sensitive(true);
             debug!("libvirt uri changed to {}", conf.borrow().libvirt.uri);
         }));
-        self.http_url.connect_changed(clone!(w_conf, w_save => move |hu| {
+        self.http_url.connect_changed(clone!(w_conf, w_save, w_c_changed => move |hu| {
             let conf = upgrade_weak!(w_conf);
+            let old_url = conf.borrow().http.url.clone();
             conf.borrow_mut().http.url = hu.get_text().unwrap();
 
+            if conf.borrow().http.url != old_url {
+                upgrade_weak!(w_c_changed).set(true);
+            }
             upgrade_weak!(w_save).set_sensitive(true);
             debug!("http url changed to {}", conf.borrow().http.url);
         }));
@@ -309,7 +404,14 @@ impl<'a> ConfigUi<'a> {
         }));
 
         let w_save_notif = self.save_notification.downgrade();
-        self.save.connect_clicked(clone!(w_conf, w_save_notif => move |s| {
+        self.save.connect_clicked(clone!(w_conf, w_save_notif, w_c_reload, w_c_changed => move |s| {
+            if upgrade_weak!(w_c_changed).get() {
+                let c_reload = upgrade_weak!(w_c_reload);
+                if !c_reload.borrow().as_ref().unwrap()() {
+                    return;
+                }
+            }
+
             let conf = upgrade_weak!(w_conf);
             let conf_str = match toml::to_string(&*conf.borrow()) {
                 Ok(c) => c,
@@ -340,10 +442,10 @@ impl<'a> ConfigUi<'a> {
     }
 }
 
-pub fn run(config: &Config, input: Box<Input + '_>) -> Result<(), Box<dyn Error>> {
+pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     let builder = gtk::Builder::new_from_string(GLADE_SRC);
 
-    let mut ui_config = ConfigUi::new(builder, config, input);
+    let mut ui_config = ConfigUi::new(builder, config);
     ui_config.load()?;
     gtk::main();
 
